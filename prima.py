@@ -4,11 +4,11 @@
 ## prima.py -- generate band-character plot using Maurits Haverkort's
 ##             SpaghettiPrimavera
 ##
-## Copyright 2013 Elias Assmann <elias.assmann@gmail.com>
+## Copyright 2013-2014 Elias Assmann <elias.assmann@gmail.com>
 
-## prima.py version 0.1
+## prima.py version 0.2
 ##
-## $Id: prima.py 76 2013-05-31 12:05:51Z assmann $
+## $Id: prima.py 352 2014-09-01 20:47:52Z assmann $
 
 ##
 ##	Vom Eise befreit sind Strom und Bäche
@@ -29,14 +29,15 @@ from numpy       import array,cumsum
 from collections import deque
 
 def svn_rev():
-    rev = "$Rev: 76 $"
+    rev = "$Rev: 352 $"
 
     try:
         return '-r' + re.search('(\d+)', rev).group()
     except:
         return ''
 
-__version__ = "0.1" + svn_rev()
+__version__ = "0.2" + svn_rev()
+sppv.version[:] = __version__
 
 ### The command line will be printed as a comment in the PS ###
 sppv.cmdline[:] = ' '.join(sys.argv)
@@ -82,7 +83,7 @@ def print_help(x):
     print "  R,G,B: color"
     print "         default: 0,0,0 (black)"
     print "   THCK: line thickness increment"
-    print "         default: 0 (no ``fat bands´´)"
+    print "         default: 0 (no “fat bands”)"
     print "    LEG: legend entry"
     print "         default: IATM-IORB (if -L option given)"
     print
@@ -113,10 +114,16 @@ def structname(x):
     global structfile
     structfile = x
 
+case = os.getcwd().split(os.sep)[-1]
+def casename(x):
+    global case
+    case = x
+
 sppv_options = [
-    ('q:', 'qtl-file=',        qtlname,         'default: $(basename $PWD).qtl_band'),
-    ('k:', 'klist-file=',      bandname,        'default: $(basename $PWD).klist_band'),
-    ('s:', 'struct-file=',     structname,      'default: $(basename $PWD).struct     [optional]'),
+    ('f:', 'case=',            casename,        '\tdefault: $(basename $PWD)'),
+    ('q:', 'qtl-file=',        qtlname,         'default: ‘case’.qtl_band'),
+    ('k:', 'klist-file=',      bandname,        'default: ‘case’.klist_band'),
+    ('s:', 'struct-file=',     structname,      'default: ‘case’.struct\t\t[optional]'),
     ('F:', 'fermi-energy=',    efermi,          'Fermi energy in Rydberg; default: from scf2'),
     ('e:', 'emin=',            emin,            '\tmin plotted energy in eV; default: -5'),
     ('E:', 'emax=',            emax,            '\tmax plotted energy in eV; default: +5'),
@@ -135,7 +142,7 @@ prima_options = [
     ('d',  'dn',               do_dn,            '\tsp: down'),
     ('o:', 'out-file=',        outname,          'send output here instead of STDOUT'),
     ('h',  'help',             print_help,       '\tthis message'),
-    ('v',  'version',          print_version,    'version info'),
+    ('v',  'version',          print_version,    '\tversion info'),
     ]
 
 ### Parse options ###
@@ -160,7 +167,6 @@ for (o, a) in opts:
         opt_dict[o][2](a)
 
 ### Set defaults ###
-case = os.getcwd().split(os.sep)[-1]
 
 ## set efermi from scf2 unless it has been set
 if not [x for x in opts if x[0] in ['-F', '--fermi-energy']]:
@@ -189,7 +195,7 @@ if not structfile:
 
 ### Read QTL file for orbital character info ###
 qtl = open(qtlfile, 'r')
-jatomre = re.compile(' *JATOM *.* (tot[\d\w,]+)')
+jatomre = re.compile(' *JATOM *.* (tot.*)')
 endre   = re.compile(' *BAND')
 
 have_orbs = []
@@ -200,6 +206,14 @@ for line in qtl:
         o = {}
 
         for i,name in enumerate(m.group(1).split(',')):
+            if name.strip() == '': break
+
+            name = {
+                '0': 'S',
+                '1': 'P',
+                '2': 'D',
+                '3': 'F'
+                }.get(name, name)
             o[name] = i
 
         have_orbs.append(o)
@@ -286,8 +300,9 @@ for a in args:
 
     # store legend entry -- there should be one entry for each cmd
     # line arg, not for each expanded atom/orb
-    legnames.append(l)
-    legcolor.append(c)
+    if l:
+        legnames.append(l)
+        legcolor.append(c)
 
     # now expand atom / orbital args
     aa = deque(aa.split('+'))

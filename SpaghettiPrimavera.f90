@@ -7,11 +7,11 @@
 !!         (C) 2008
 
 !! Modified for inclusion in Python (prima.py):
-!!         Elias Assmann <elias.assmann@gmail.com> (2013)
+!!         Elias Assmann <elias.assmann@gmail.com> (2013-2014)
 
-!! prima.py version 0.1
+!! prima.py version 0.2
 !!
-!! $Id: SpaghettiPrimavera.f90 73 2013-05-31 11:55:37Z assmann $
+!! $Id: SpaghettiPrimavera.f90 354 2014-09-01 20:53:41Z assmann $
 
 !! Spaghetti Primavera is a program that creates a band-structure plot (eps)
 !! given a list of k-points and a list of eigen-energies and eigen-functions
@@ -23,6 +23,8 @@
 !! The Wien2k version expects a klist file and a qtl file
 
 module sppv_data
+  character(512) :: version
+
   integer, parameter :: MaxAtoms=1000, MaxOrbitals=50
 
   character(512) :: qtlName, bandName, cmdLine, fontName="Times-Roman"
@@ -72,7 +74,7 @@ subroutine SpaghettiPrimavera(CharacterToRGBColor, CharacterToThickness)
      end subroutine WritePSLegend
   end interface
 
-  call WritePSHead(Xsize, Ysize, cmdLine)
+  call WritePSHead(Xsize, Ysize, version, cmdLine)
   call WritePSKpoints(bandName, Nkpoints, Xsize, Ysize, &
        &              TextSize, fontName)
   if (writeLegend) then
@@ -89,22 +91,24 @@ subroutine SpaghettiPrimavera(CharacterToRGBColor, CharacterToThickness)
   call WritePSTail()
 end subroutine SpaghettiPrimavera
 
-subroutine WritePSHead(Xsize, Ysize, cmdLine)
+subroutine WritePSHead(Xsize, Ysize, version, cmdLine)
   !
   ! writes the header of the postscript to standard output
   !
+
   implicit none
 
   real*8 Xsize,Ysize
-  character(*) :: cmdLine
+  character(*) :: version, cmdLine
 
   write(6,100)"%!PS-Adobe-2.0 EPSF-2.0"
   write(6,101)"%%BoundingBox: 0 0",int(Xsize+100),int(Ysize+100)
   write(6,102)"%%HiResBoundingBox: 0.000000 0.000000",Xsize+100,Ysize+100
   write(6,100)"%%Creator: Spaghetti Primavera by Maurits W. Haverkort"
-  write(6,100)"%%prima.py command line: " // trim(cmdLine)
+  write(6,100)"%%prima.py V. "//trim(version)//", command line: " // trim(cmdLine)
   write(6,100)"%%EndComments"
   write(6,100)"%%BeginProlog"
+  write(6,100)"1 1 1 setrgbcolor clippath fill % added Sep 2014 to make current ‘evince’ versions display white bg"
   write(6,100)"save"
   write(6,100)"countdictstack"
   write(6,100)"mark"
@@ -461,7 +465,7 @@ subroutine WritePSBands(qtlName, nkpoints ,Xsize, Ysize, &
   real*8 OrbCharacter(MaxAtoms,MaxOrbitals),Thickness,RGBColor(3),&
        &       Energy,Eprev,Enow,Enext,ThicknessB,RGBColorB(3),&
        &       ptsPerE,ptsPerK
-  integer OK,nAtom,nOrb(MaxAtoms),i,j,k,dumi,junki
+  integer OK,nAtom,nOrb(MaxAtoms),i,j,k,junki
   character RDWD*(256)
 
   ptsPerE=Ysize/(Emax-Emin)
@@ -480,23 +484,36 @@ subroutine WritePSBands(qtlName, nkpoints ,Xsize, Ysize, &
      stop
   endif
 
-  do i=1,MaxAtoms
-     nOrb(i)=0
-     do j=1,MaxOrbitals
-        OrbCharacter(i,j)=0
-     enddo
-  enddo
-  ! find out how many atoms and orbitals ther are
+  nOrb=0
+  OrbCharacter=0
+
+  ! find out how many atoms and orbitals there are
   nAtom=0
   read(unit=2,fmt=100,iostat=OK,err=200,end=201) RDWD
   do while (index(RDWD,"BAND").EQ.0) ! newer Wien2k versions seem to omit the colon in “BAND:”
      if(index(RDWD,"JATOM").NE.0) then
         nAtom=nAtom+1
-        nOrb(nAtom)=1
-        dumi=1
-        do while (index(RDWD(dumi:256),",").NE.0)
-           dumi=dumi+index(RDWD(dumi:256),",")
+
+        if (nAtom > MaxAtoms) then
+           write(0, '("sppv: maximum number of atoms (", I0, ") exceeded")') &
+                MaxAtoms
+           call exit(1)
+        end if
+
+        i=1
+        do
            nOrb(nAtom)=nOrb(nAtom)+1
+           if (nOrb(nAtom) > MaxOrbitals) then
+              write(0, '("sppv: maximum number of orbitals (", I0, ") &
+                   & exceeded for atom ", I0)') MaxOrbitals, nAtom
+              call exit(1)
+           end if
+
+           j = index(RDWD(i:), ",")
+           i = i + j
+           if (j==0 .or. RDWD(i:)=='') then
+              exit
+           end if
         enddo
      endif
      read(unit=2,fmt=100,iostat=OK,err=200,end=201) RDWD
@@ -506,14 +523,9 @@ subroutine WritePSBands(qtlName, nkpoints ,Xsize, Ysize, &
   nOrb(nAtom)=1
   ! read nkpoints k points then read the string BAND: XX if the 
   ! string BAND: XX can not be read while EOF has been reached stop
-  do while(1.EQ.1)
-     i=0    
-     do while(i.LT.nkpoints)
-        i=i+1
-        j=0
-        do while(j.LT.nAtom)
-           j=j+1
-           k=0
+  do
+     do i = 1, nkpoints
+        do j = 1, nAtom
            read(unit=2,fmt=*,iostat=OK,err=200,end=201) Energy,junki,&
                 &                            (OrbCharacter(j,k),k=1,nOrb(j))
            Energy=(Energy-Efermi)*RydToEv

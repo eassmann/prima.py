@@ -1,0 +1,15 @@
+Version 0.2 (2014-09-01):
+
+ * add support for ‘x qtl’-generated files
+
+ * fix some bugs related to parsing of band character names
+
+ * added option --case
+
+ * add line to postscript for explicit white background
+   (current versions of ‘evince’ were drawing black bg)
+
+ * add optimization options in Makefile (can be important even here!)
+
+
+Version 0.1 (2013-05-31): initial release
