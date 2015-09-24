@@ -1,0 +1,8 @@
+* --case argument
+
+* take Fermi energy from .scf; do not require it when not going to
+  make plot
+
+* color names / hex codes (-> normalization!)
+
+* raise error when called without arguments and qtl not found

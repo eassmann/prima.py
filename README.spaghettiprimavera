@@ -1,0 +1,130 @@
+Dear Peter Blaha (and others)
+
+Some time ago I wrote a program to do a collerfull band-structure plot 
+showing different band characters in one plot. The input is a wien2k 
+case.klist_band and case.qtl file. Furthermore one specifies 3 fortran 
+routines, one defining the plot size, font size etc. One defining the 
+function that translates the character to RGB values and one that 
+translates the caracter to a line thickness. The output is an eps and a 
+pdf file. Below is a larger description written before and attached are 
+the fortran files plus an example as used in Phys. Rev. Lett. *101*, 
+026406 (2008)
+
+Feel free to use it, distribute it and if you wish include it into wien2k.
+
+The input format is still quite rough (fortran subroutines) but therefor 
+rather flexible.
+
+I've attached an tar.gz file that contains an example
+
+Best wishes,
+Maurits Haverkort
+
+
+Peter Blaha wrote:
+> This is not yet supported in standard WIEN2k spaghetti. You can only
+> plot ONE type of character (or a sum) at the same time.
+> Eventually one could play some tricks with the postscript files and
+> overlay them (using different colors or the xmgrace option), but this requires
+> that you understand postscript.
+>
+> (If somebody wants to implement that, he is very welcome and I'll take it
+> over in the official version...)
+>
+> Tarik Ouahrani schrieb:
+>   
+>> dear Wien2k user
+>> I have a question how to introduce keys when I plot  band structure 
+>> showing s,p,d,f character,
+>>  it's all about the paper of  C. Ambrosch-Draxl ( [cond-mat/0402523] ) 
+>> figure 5 page 23.
+>>
+>> thanks
+>>
+>>
+>> ------------------------------------------------------------------------
+>> Appelez vos amis de PC à PC -- C'EST GRATUIT Téléchargez Messenger, 
+>> c'est gratuit ! <http://get.live.com/messenger/overview>
+>>
+>>
+>> ------------------------------------------------------------------------
+>>
+>> _______________________________________________
+>> Wien mailing list
+>> Wien@zeus.theochem.tuwien.ac.at
+>> http://zeus.theochem.tuwien.ac.at/mailman/listinfo/wien
+>>     
+>
+>   
+
+
+[Fwd: Collored spaghetti for wien2K]
+================================
+
+-------- Original Message --------
+Subject: 	Collored spaghetti for wien2K
+Date: 	Thu, 20 Mar 2008 21:30:15 +0100
+From: 	Maurits W. Haverkort <M.W.Haverkort@fkf.mpg.de>
+To: 	Ilya Elfimov <elfimov@physics.ubc.ca>
+
+
+
+Hi Ilya
+
+I've cleaned the script that can make a colored band-structure plot as
+we used for our SOC paper on Sr2RuO4. I guess it should not be to hard
+to use. I've not really tested it much, but it's small enough to be
+quite robust. If you like to have it, here you are.
+
+I've attached 3 files, SpaghettiPrimavera, a shell script that runs the
+program. SpaghettiPrimavera.f, the code doing the plotting and sppv.
+I've called the program SpaghettiPrimavera as it is a collorfull kind of
+Spaghetti, but after typing 5 times SpaghettiPrimavera I got lazy and
+the script sppv just calls SpaghettiPrimavera.
+
+In order to install one should simply place all three files in a bin
+directory that is within your path.
+One should in the file SpaghettiPrimavera change the line FC="ifort
+-static" to the preferred fortran compiler. (!! one should not compile
+SpaghettiPrimavera.f but place it in the bin directory!!)
+
+In order to run the script one goes to a Wien2k case directory. Here one
+needs a case.klist_band file and have run a calculation with the -qtl
+option. This will create a file called case.qtl. Then one can make a
+band-structure plot with the command "sppv inputfilename.f" Whereby
+inputfilename.f is a file specifying what should be plotted.
+
+The format of inputfilename.f is a fortran code, specifying 3 subroutines
+
+1) ReadDefinitions()
+This specifies the size of the graph, font size, energy range, tick
+distance etc. (normally one would read this from a file)
+
+2) CharacterToThickness()
+A function returning the value Thickness (real*8) which specifies as a
+function of the character of the bands the line thickness of the plot.
+This looks like the fatbands option in spaghetti, but I did not like
+these circles
+
+3) CharacterToColor()
+A function returning the value Red, Green, and Blue (real*8), specifying
+the color of the band. Red, Green and Blue should have a value inbetween
+0 and 1.
+
+The format of the matrix OrbCharacter(iatom,iorbital) is a real*8 matrix
+specifying the character of the bands. The atoms are in the same order
+as the struct file, the orbitals are specified at several hidden places
+in Wien2K, but in the header of the case.qtl file one can see an
+overview of which orbitals are in the end used.
+
+I've attached also a ziped file with a few examples (I included the .qtl
+file therefor the file is a bit large). The name of the definition file
+in principle does not matter, it should end with .f however. The script
+knows the correct input file as it is given as a command line argument
+to it.
+
+Let me know if you find it useful and/or if you have questions.
+
+Maurits
+
+
