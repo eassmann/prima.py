@@ -1,3 +1,21 @@
+Version 0.3 (2015-09-xx):
+
+ * add option --updn to combine spins in one plot
+
+ * read Fermi energy from ‘scf’ rather than ‘scf2’; do not require it
+   unless needed
+
+ * change delimiter for combined atoms/orbitals to '++|&' to avoid
+   clash with orbital names that contain ‘+’
+
+ * new options --out-suffix, --config-file, --verbose
+
+ * make atoms and orbitals case insensitive
+
+ * colors may be also given in HTML-style hex notation or color names;
+   and may be prefixed by a factor, “F × COLOR” for scaling
+
+
 Version 0.2 (2014-09-01):
 
  * add support for ‘x qtl’-generated files
@@ -13,3 +31,10 @@ Version 0.2 (2014-09-01):
 
 
 Version 0.1 (2013-05-31): initial release
+
+
+## Local Variables:
+## mode: text
+## End:
+##
+## Time-stamp: <2015-09-14 17:56:14 assman@faepop23.tu-graz.ac.at>

@@ -7,11 +7,11 @@
 !!         (C) 2008
 
 !! Modified for inclusion in Python (prima.py):
-!!         Elias Assmann <elias.assmann@gmail.com> (2013-2014)
+!!         Elias Assmann <elias.assmann@gmail.com> (2013-2015)
 
 !! prima.py version 0.2
 !!
-!! $Id: SpaghettiPrimavera.f90 354 2014-09-01 20:53:41Z assmann $
+!! $Id: SpaghettiPrimavera.f90 618 2015-09-14 15:58:11Z assmann $
 
 !! Spaghetti Primavera is a program that creates a band-structure plot (eps)
 !! given a list of k-points and a list of eigen-energies and eigen-functions
@@ -29,100 +29,128 @@ module sppv_data
 
   character(512) :: qtlName, bandName, cmdLine, fontName="Times-Roman"
   integer :: MinorTicks=4, nkpoints
+  real(8) :: BaseThickness=.1, AxesThickness=.5
   real(8) :: Xsize=500, Ysize=700, MajorTicks=1.0, TextSize=12
   real(8) :: Emin=-5, Emax=5, Efermi=0
-  real(8), allocatable :: colors(:, :)
+  real(8), allocatable :: legcolors(:,:) ! (3, #legend)
+  real(8), allocatable :: orbcolors(:,:) ! (3, #selected)
+  real(8), allocatable :: orbthicks(:)   ! (#selected)
+  integer, allocatable :: atomsorbs(:,:) ! (2, #selected)
 
   character, allocatable :: legend(:)
-  logical :: writeLegend = .false.
+  logical :: writeLegend=.false., writeKLines=.true., writeKLabels=.true.
+  logical :: writeFermiLine=.true.
   integer, allocatable :: legentries(:)
 end module sppv_data
 
-subroutine SpaghettiPrimavera(CharacterToRGBColor, CharacterToThickness)
+module sppv_formats
+  ! f2py does not like to have ‘len=*’ here
+  character(len=256), parameter :: &
+       fmt_line  = "(2(F0.6,1X), 'lineto')",       &
+       fmt_move  = "(2(F0.6,1X), 'moveto')",       &
+       fmt_width = "(F0.3,1X,    'setlinewidth')", &
+       fmt_color = "(3(F0.4,1X), 'setrgbcolor')",  &
+       fmt_scale = "(F0.6,1X,    'scalefont')",    &
+       fmt_bgcol = "(3(F0.4,1X), 'setrgbcolor clippath fill % added Sep 2014&
+       & to make current ‘evince’ versions display white bg')"
+end module sppv_formats
+
+module sppv_colors
+  real(8), parameter, dimension(3) :: &
+       WHITE=(/1,1,1/), BLACK=(/0,0,0/), &
+       RED=(/1,0,0/), GREEN=(/1,0,0/), BLUE=(/1,0,0/)
+
+  real(8), parameter, dimension(3) :: &
+       col_bg=WHITE, col_axes=BLACK, col_ticks=BLACK, col_leg=BLACK, &
+       col_err=RED, col_klab=BLACK
+end module sppv_colors
+
+subroutine SpaghettiPrimavera
   use sppv_data
+
   implicit none
 
-  ! These are callbacks to be passed from Python.  Interestingly, when
-  ! I give “intent(callback)” for them explicitly, the program dies of
-  ! SIGSEGV.
-  external CharacterToRGBColor
-  external CharacterToThickness
-
-  interface
-     ! It seems CharacterToRGBColor has to be a subroutine to be able
-     ! to return RGBColor as an array.  For consistency then,
-     ! CharacterToThickness is also a subroutine.
-     subroutine CharacterToRGBColor(OrbCharacter, RGBColor)
-       use sppv_data
-       real(8), intent(in)  :: OrbCharacter(MaxAtoms, MaxOrbitals)
-       real(8), intent(out) :: RGBColor(3)
-     end subroutine CharacterToRGBColor
-
-     subroutine CharacterToThickness(OrbCharacter, Thickness)
-       use sppv_data
-       real(8), intent(in)  :: OrbCharacter(MaxAtoms, MaxOrbitals)
-       real(8), intent(out) :: Thickness
-     end subroutine CharacterToThickness
-  end interface
-
-  interface
-     subroutine WritePSLegend(TextSize, fontName, XSize, YSize, &
-          &                   colors, legend, legentries)
-       real(8) :: TextSize, XSize, YSize, colors(:,:)
-       character(*) :: fontName, legend(:)
-       integer :: legentries(:)
-     end subroutine WritePSLegend
-  end interface
-
-  call WritePSHead(Xsize, Ysize, version, cmdLine)
-  call WritePSKpoints(bandName, Nkpoints, Xsize, Ysize, &
-       &              TextSize, fontName)
+  call WritePSHead(Xsize, Ysize, version, cmdLine, qtlName)
+  call WritePSKpoints(bandName, Nkpoints, Xsize, Ysize, AxesThickness, &
+       &              TextSize, fontName, writeKLines, writeKLabels)
   if (writeLegend) then
      call WritePSLegend(TextSize, fontName, XSize, YSize, &
-          &             colors, legend, legentries)
+          &             legcolors, legend, legentries)
   end if
-  call WritePSAxesA(Xsize, Ysize, Emin, Emax)
+  call WritePSAxesA(Xsize, Ysize, Emin, Emax, AxesThickness, writeFermiLine)
   call WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
        &            Efermi, TextSize, Emin, Emax, &
-       &            CharacterToRGBColor, CharacterToThickness, &
        &            MaxAtoms, MaxOrbitals, fontName)
-  call WritePSAxesB(Xsize, Ysize, Emin, Emax, MajorTicks, &
-       &            MinorTicks, TextSize, fontName)
+  call WritePSAxesB(Xsize, Ysize, Emin, Emax, MajorTicks, MinorTicks, &
+       &            AxesThickness, TextSize, fontName)
   call WritePSTail()
-end subroutine SpaghettiPrimavera
 
-subroutine WritePSHead(Xsize, Ysize, version, cmdLine)
+contains
+
+function CharacterToRGBColor(OrbCharacter) result(RGBColor)
+  use sppv_data
+  real(8), intent(in)  :: OrbCharacter(MaxAtoms, MaxOrbitals)
+  real(8)              :: RGBColor(3)
+
+  integer :: i
+
+  RGBColor = 0
+
+  do i = 1, size(atomsorbs,2)
+     RGBColor = RGBColor + &
+          OrbCharacter(atomsorbs(1, i), atomsorbs(2, i)) * orbcolors(:,i)
+  end do
+end function CharacterToRGBColor
+
+function CharacterToThickness(OrbCharacter) result(Thickness)
+  use sppv_data
+  real(8), intent(in)  :: OrbCharacter(MaxAtoms, MaxOrbitals)
+  real(8)              :: Thickness
+
+  integer :: i
+
+  Thickness = BaseThickness
+
+  do i = 1, size(atomsorbs,2)
+     Thickness = Thickness &
+          + OrbCharacter(atomsorbs(1, i), atomsorbs(2, i)) * orbthicks(i)
+  end do
+end function CharacterToThickness
+
+subroutine WritePSHead(Xsize, Ysize, version, cmdLine, qtlName)
   !
   ! writes the header of the postscript to standard output
   !
 
+  use sppv_formats
+  use sppv_colors
+
   implicit none
 
-  real*8 Xsize,Ysize
-  character(*) :: version, cmdLine
+  real(8),          intent(in) :: Xsize, Ysize
+  character(len=*), intent(in) :: version, cmdLine, qtlName
 
-  write(6,100)"%!PS-Adobe-2.0 EPSF-2.0"
-  write(6,101)"%%BoundingBox: 0 0",int(Xsize+100),int(Ysize+100)
-  write(6,102)"%%HiResBoundingBox: 0.000000 0.000000",Xsize+100,Ysize+100
-  write(6,100)"%%Creator: Spaghetti Primavera by Maurits W. Haverkort"
-  write(6,100)"%%prima.py V. "//trim(version)//", command line: " // trim(cmdLine)
-  write(6,100)"%%EndComments"
-  write(6,100)"%%BeginProlog"
-  write(6,100)"1 1 1 setrgbcolor clippath fill % added Sep 2014 to make current ‘evince’ versions display white bg"
-  write(6,100)"save"
-  write(6,100)"countdictstack"
-  write(6,100)"mark"
-  write(6,100)"newpath"
-  write(6,100)"/setpagedevice {pop} def"
-  write(6,100)"/L{ newpath setlinewidth setrgbcolor moveto lineto&
+  write(6,'(A)')"%!PS-Adobe-2.0 EPSF-2.0"
+  write(6,'(A,2(1X,I0))')"%%BoundingBox: 0 0",int(Xsize+100),int(Ysize+100)
+  write(6,'(A,2(1X,F0.6))')"%%HiResBoundingBox: 0.000000 0.000000",Xsize+100,Ysize+100
+  write(6,'(A)')"%% Creator: Spaghetti Primavera by Maurits W. Haverkort"
+  write(6,'(A)')"%%          and prima.py v. "//trim(version)
+  write(6,'(A)')"%% command line: "//trim(cmdLine)
+  write(6,'(A)')"%% using file ‘"  //trim(qtlName)//"’"
+  write(6,'(A)')"%%EndComments"
+  write(6,'(A)')"%%BeginProlog"
+  write(6,fmt_bgcol) col_bg
+  write(6,'(A)')"save"
+  write(6,'(A)')"countdictstack"
+  write(6,'(A)')"mark"
+  write(6,'(A)')"newpath"
+  write(6,'(A)')"/setpagedevice {pop} def"
+  write(6,'(A)')"/L{ newpath setlinewidth setrgbcolor moveto lineto&
        & lineto 0 setlinecap 1 setlinejoin stroke } def"
-  write(6,100)"/L1{ newpath setlinewidth setrgbcolor moveto&
+  write(6,'(A)')"/L1{ newpath setlinewidth setrgbcolor moveto&
        & lineto 0 setlinecap 1 setlinejoin stroke } def"
-  write(6,100)"%%EndProlog"
-  write(6,100)"%%Page 1 1"
-100 FORMAT(A)
-101 FORMAT(A,2I5)
-102 FORMAT(A,2F12.6)
+  write(6,'(A)')"%%EndProlog"
+  write(6,'(A)')"%%Page 1 1"
 end subroutine WritePSHead
 
 subroutine WritePSTail()
@@ -130,141 +158,155 @@ subroutine WritePSTail()
   ! Writes the tail of the postscript to standard output
   !
   implicit none
-  write(6,100)"%%Trailer"
-  write(6,100)"cleartomark"
-  write(6,100)"countdictstack"
-  write(6,100)"exch sub { end } repeat"
-  write(6,100)"restore"
-  write(6,100)"%%EOF"
-100 FORMAT(A)
+  write(6,'(A)')"%%Trailer"
+  write(6,'(A)')"cleartomark"
+  write(6,'(A)')"countdictstack"
+  write(6,'(A)')"exch sub { end } repeat"
+  write(6,'(A)')"restore"
+  write(6,'(A)')"%%EOF"
 end subroutine WritePSTail
 
-subroutine WritePSAxesA(Xsize, Ysize, Emin, Emax)
+subroutine WritePSAxesA(Xsize, Ysize, Emin, Emax, AxesThickness, writeFermiLine)
   !
   ! Writes the part of the axes system to the standard output
   ! that should be behind the graph 
   !
-  implicit none
-  real*8 Xsize, Ysize, Emin, Emax
+  use sppv_formats
+  use sppv_colors
 
-  real*8 PtEfermi,PtYunit
+  implicit none
+  real(8), intent(in) :: Xsize, Ysize, Emin, Emax, AxesThickness
+  logical, intent(in) :: writeFermiLine
+
+  real(8) :: PtEfermi,PtYunit
   ! A line at the fermi energy
   PtEfermi=50-(Ysize*Emin)/(Emax-Emin)
   PtYunit=(Ysize)/(Emax-Emin)
-  if ((Emin.LT.0).AND.(Emax.GE.0)) then
-     write(6,100)"newpath"
-     write(6,100)"1 setlinewidth"
-     write(6,100)"0.5 0.5 0.5 setrgbcolor"
-     write(6,103)"50 ",PtEfermi," moveto"
-     write(6,102)50+Xsize,PtEfermi," lineto"
-     write(6,100)"stroke"
+  if (writeFermiLine .and. Emin<0 .and. Emax>0) then
+     write(6,'(A)')"newpath"
+     write(6,fmt_width) AxesThickness
+     write(6,fmt_color) col_axes
+     write(6,fmt_move) 50.,PtEfermi
+     write(6,fmt_line) 50+Xsize,PtEfermi
+     write(6,'(A)')"stroke"
   endif
-
-100 FORMAT(A)
-102 FORMAT(2F12.6,A)
-103 FORMAT(A,F12.6,A)
 end subroutine WritePSAxesA
 
-subroutine WritePSAxesB(Xsize, Ysize, Emin, Emax, MajorTicks, &
-     &                  MinorTicks, TextSize, fontName)
+subroutine WritePSAxesB(Xsize, Ysize, Emin, Emax, MajorTicks, MinorTicks, &
+     &                  AxesThickness, TextSize, fontName)
   !
   ! Writes the part of the axes system that should be on top of the graph
   !
 
+  use sppv_formats
+  use sppv_colors
+
   implicit none
 
-  integer MinorTicks
-  real*8 Xsize, Ysize, Emin, Emax, MajorTicks, TextSize
-  character(*) :: fontName
+  integer,          intent(in) :: MinorTicks
+  real(8),          intent(in) :: Xsize, Ysize, Emin, Emax
+  real(8),          intent(in) :: MajorTicks, TextSize, AxesThickness
+  character(len=*), intent(in) :: fontName
 
-  real*8 PtEfermi,PtYunit,PtTick
+  real(8) :: PtEfermi,PtYunit,PtTick
+
+  character(len=*), parameter :: fmt_rj = "(A,F5.1,A)"
+
+
   ! some positions in pts
   PtEfermi=50-(Ysize*Emin)/(Emax-Emin)
   PtYunit=(Ysize)/(Emax-Emin)
+
   ! write the ticks
   if((Emin+MajorTicks).LT.Emax) then
-     write(6,100)"newpath"
-     write(6,100)"1 setlinewidth"
-     write(6,100)"0 0 0 setrgbcolor"
+     write(6,'(A)')"newpath"
+     write(6,fmt_width) AxesThickness
+     write(6,fmt_color) col_ticks
      PtTick=PtEfermi
      do while (PtTick.LT.(Ysize+50))
-        write(6,103)"50 ",PtTick," moveto"
-        write(6,102)50+Xsize/100.0,PtTick," lineto"
-        write(6,102)50+Xsize,PtTick," moveto"
-        write(6,102)50+Xsize-Xsize/100.0,PtTick," lineto"
+        write(6,fmt_move)50.,PtTick
+        write(6,fmt_line)50+Xsize/100.0,PtTick
+        write(6,fmt_move)50+Xsize,PtTick
+        write(6,fmt_line)50+Xsize-Xsize/100.0,PtTick
         PtTick=PtTick+MajorTicks*PtYunit
      enddo
      PtTick=PtEfermi
      PtTick=PtTick-MajorTicks*PtYunit
      do while (PtTick.GE.(50))
-        write(6,103)"50 ",PtTick," moveto"
-        write(6,102)50+Xsize/100.0,PtTick," lineto"
-        write(6,102)50+Xsize,PtTick," moveto"
-        write(6,102)50+Xsize-Xsize/100.0,PtTick," lineto"
+        write(6,fmt_move)50.,PtTick
+        write(6,fmt_line)50+Xsize/100.0,PtTick
+        write(6,fmt_move)50+Xsize,PtTick
+        write(6,fmt_line)50+Xsize-Xsize/100.0,PtTick
         PtTick=PtTick-MajorTicks*PtYunit
      enddo
-     write(6,100)"stroke"
-     write(6,100)"newpath"
-     write(6,100)"0.75 setlinewidth"
-     write(6,100)"0 0 0 setrgbcolor"
+     write(6,'(A)')"stroke"
+     write(6,'(A)')"newpath"
+     write(6,fmt_width) AxesThickness
+     write(6,fmt_color) col_axes
      PtTick=PtEfermi
      do while (PtTick.LT.(Ysize+50))
-        write(6,103)"50 ",PtTick," moveto"
-        write(6,102)50+Xsize/150.0,PtTick," lineto"
-        write(6,102)50+Xsize,PtTick," moveto"
-        write(6,102)50+Xsize-Xsize/150.0,PtTick," lineto"
+        write(6,fmt_move)50.,PtTick
+        write(6,fmt_line)50+Xsize/150.0,PtTick
+        write(6,fmt_move)50+Xsize,PtTick
+        write(6,fmt_line)50+Xsize-Xsize/150.0,PtTick
         PtTick=PtTick+MajorTicks*PtYunit/(1.0+MinorTicks)
      enddo
      PtTick=PtEfermi
      PtTick=PtTick-MajorTicks*PtYunit/(1.0+MinorTicks)
      do while (PtTick.GE.(50))
-        write(6,103)"50 ",PtTick," moveto"
-        write(6,102)50+Xsize/150.0,PtTick," lineto"
-        write(6,102)50+Xsize,PtTick," moveto"
-        write(6,102)50+Xsize-Xsize/150.0,PtTick," lineto"
+        write(6,fmt_move)50.,PtTick
+        write(6,fmt_line)50+Xsize/150.0,PtTick
+        write(6,fmt_move)50+Xsize,PtTick
+        write(6,fmt_line)50+Xsize-Xsize/150.0,PtTick
         PtTick=PtTick-MajorTicks*PtYunit/(1.0+MinorTicks)
      enddo
-     write(6,100)"stroke"
+     write(6,'(A)')"stroke"
   endif
+
+  ! definition for right-justifying tick numbers
+  ! from http://www.cs.utsa.edu/~wagner/CS3723/postrecs/justify/just.html
+  write(6, '(A)') "% procedure to right justify against x"
+  write(6, '(A)') "/rj { % stack: string "
+  write(6, '(A)') "  dup stringwidth pop % stack: str width"
+!  write(6, '(A)') "  x y moveto % move to right end"
+  write(6, '(A)') "  neg 0 rmoveto % move to left end"
+  write(6, '(A)') "  show % print string"
+!  write(6, '(A)') "  next % increment y"
+  write(6, '(A)') "} def"
+
   ! write the numbers next to the ticks
-  write(6,100)"/" // trim(fontName) // " findfont"
-  write(6,101)TextSize," scalefont"
-  write(6,100)"setfont"
-  write(6,100)"0 0 0 setrgbcolor"
+  write(6,'(A)')"/" // trim(fontName) // " findfont"
+  write(6,fmt_scale) TextSize
+  write(6,'(A)')"setfont"
+  write(6,fmt_color) col_axes
   PtTick=PtEfermi
   do while (PtTick.LT.(Ysize+50))
-     write(6,102)50-2*TextSize,PtTick-TextSize/4.0," moveto"
-     write(6,104)"(",(PtTick-PtEfermi)/PtYunit,") show"
+     write(6,fmt_move)45., PtTick-TextSize/4.0
+     write(6,fmt_rj)"(",(PtTick-PtEfermi)/PtYunit,") rj"
      PtTick=PtTick+MajorTicks*PtYunit
   enddo
   PtTick=PtEfermi
   PtTick=PtTick-MajorTicks*PtYunit
   do while (PtTick.GE.(50))
-     write(6,102)50-2*TextSize,PtTick-TextSize/4.0," moveto"
-     write(6,104)"(",(PtTick-PtEfermi)/PtYunit,") show"
+     write(6,fmt_move)45., PtTick-TextSize/4.0
+     write(6,fmt_rj)"(",(PtTick-PtEfermi)/PtYunit,") rj"
      PtTick=PtTick-MajorTicks*PtYunit
   enddo
   ! write a frame around the graph
-  write(6,100)"newpath"
-  write(6,100)"1 setlinewidth"
-  write(6,100)"0 setlinejoin"
-  write(6,100)"0 0 0 setrgbcolor"
-  write(6,100)"50 50 moveto"
-  write(6,101)Xsize+50," 50 lineto"
-  write(6,102)Xsize+50,Ysize+50," lineto"
-  write(6,103)"50",Ysize+50," lineto"
-  write(6,100)"closepath"
-  write(6,100)"stroke"
-
-100 FORMAT(A)
-101 FORMAT(F12.6,A)
-102 FORMAT(2F12.6,A)
-103 FORMAT(A,F12.6,A)
-104 FORMAT(A,F5.1,A)
+  write(6,'(A)')"newpath"
+  write(6,fmt_width) AxesThickness
+  write(6,'(A)')"0 setlinejoin"
+  write(6,fmt_color) col_axes
+  write(6,fmt_move) 50., 50.
+  write(6,fmt_line)Xsize+50,50.
+  write(6,fmt_line)Xsize+50,Ysize+50
+  write(6,fmt_line)50.,Ysize+50
+  write(6,'(A)')"closepath"
+  write(6,'(A)')"stroke"
 end subroutine WritePSAxesB
 
-subroutine WritePSKpoints(bandName, nkpoints, Xsize, Ysize, &
-     &                    TextSize, fontName)
+subroutine WritePSKpoints(bandName, NKpoints, Xsize, Ysize, AxesThickness, &
+     &                    TextSize, fontName, writeKLines, writeKLabels)
   !
   ! reads the file bandName and 
   ! makes vertical lines for each k-point that has a label in the 
@@ -272,24 +314,28 @@ subroutine WritePSKpoints(bandName, nkpoints, Xsize, Ysize, &
   ! returns the number of points that should be between each k-point
   ! and the number of k-points
   !
+  use sppv_formats
+  use sppv_colors
+
   implicit none
 
-  character(len=*) bandName, fontName
-  real*8 Xsize, Ysize, TextSize
-  integer nkpoints
+  character(len=*), intent(in)  :: bandName, fontName
+  real(8),          intent(in)  :: Xsize, Ysize, TextSize, AxesThickness
+  integer,          intent(out) :: nkpoints
+  logical,          intent(in)  :: writeKLines, writeKLabels
 
-  integer OK,nlabels,labelpoint(100),ilabel
-  character RDWD*(128),label(100)*(2)
+  integer   :: OK,nlabels,labelpoint(100),ilabel
+  character :: RDWD*(128),label(100)*(2)
 
   open(unit=1,file=bandName,status="old",iostat=OK)
   if(OK.NE.0) then
-     write(6,100)"/" // trim(fontName) // " findfont"
-     write(6,101)TextSize," scalefont"
-     write(6,100)"setfont"
-     write(6,100)"newpath"
-     write(6,100)"1 0 0 setrgbcolor"
-     write(6,103)"50 ",Ysize/2+50," moveto"
-     write(6,100)"(Could not open file",bandName,") show"
+     write(6,'(A)')"/" // trim(fontName) // " findfont"
+     write(6,fmt_scale) TextSize
+     write(6,'(A)')"setfont"
+     write(6,'(A)')"newpath"
+     write(6,fmt_color) col_err
+     write(6,fmt_move)50.,Ysize/2+50
+     write(6,'(A)')"(Could not open file",bandName,") show"
      call WritePSTail()
      stop
   endif
@@ -297,7 +343,7 @@ subroutine WritePSKpoints(bandName, nkpoints, Xsize, Ysize, &
   ! the labels and their position
   nkpoints=0
   nlabels=0
-  read(unit=1,fmt=100,iostat=OK,err=200,end=201) RDWD
+  read(unit=1,fmt='(A)',iostat=OK,end=201) RDWD
   do while (RDWD.NE."END")
      nkpoints=nkpoints+1
      if(RDWD(1:1).NE." ") then
@@ -305,83 +351,81 @@ subroutine WritePSKpoints(bandName, nkpoints, Xsize, Ysize, &
         label(nlabels)=RDWD(1:2)
         labelpoint(nlabels)=nkpoints
      endif
-     read(unit=1,fmt=100,iostat=OK,err=200,end=201) RDWD
+     read(unit=1,fmt='(A)',iostat=OK,end=201) RDWD
   enddo
-  ! plot lines for specific k-points
-  ilabel=1
-  do while (ilabel.LT.nlabels-1)
-     ilabel=ilabel+1
-     write(6,100)"newpath"
-     write(6,100)"1 setlinewidth"
-     write(6,100)"0.5 0.5 0.5 setrgbcolor"
-     write(6,101)50+(labelpoint(ilabel)-1.0)*Xsize/(nkpoints-1.0),&
-          &              " 50 moveto"
-     write(6,102)50+(labelpoint(ilabel)-1.0)*Xsize/(nkpoints-1.0),&
-          &              50+Ysize," lineto"
-     write(6,100)"stroke"
-  enddo
-  ! write the labels for specific k-points
-  ilabel=0
-  do while (ilabel.LT.nlabels)
-     ilabel=ilabel+1
-     if (label(ilabel)(2:2).EQ." ") then
-        write(6,100)"/" // trim(fontName) // " findfont"
-     else
-        write(6,100)"/Symbol findfont"
-     endif
-     write(6,101)TextSize," scalefont"
-     write(6,100)"setfont"
-     write(6,100)"0 0 0 setrgbcolor"
-     write(6,102)50+(labelpoint(ilabel)-1.0)*Xsize/(nkpoints-1.0)-&
-          &              TextSize/2.0,50-TextSize," moveto"
-     write(6,100)"(",label(ilabel)(1:1),") show"
-  enddo
+
+  if (writeKLines) then
+     ! plot lines for specific k-points
+     do ilabel = 1, nlabels
+        write(6,'(A)')"newpath"
+        write(6,fmt_width) AxesThickness
+        write(6,fmt_color) col_klab
+        write(6,fmt_move) 50+(labelpoint(ilabel)-1.0)*Xsize/(nkpoints-1.0), &
+             &            50.
+        write(6,fmt_line) 50+(labelpoint(ilabel)-1.0)*Xsize/(nkpoints-1.0),&
+             &            50+Ysize
+        write(6,'(A)')"stroke"
+     enddo
+  end if
+
+  if (writeKLabels) then
+     ! write the labels for specific k-points
+     do ilabel = 1, nlabels
+        if (label(ilabel)(2:2).EQ." ") then
+           write(6,'(A)')"/" // trim(fontName) // " findfont"
+        else
+           write(6,'(A)')"/Symbol findfont"
+        endif
+        write(6,fmt_scale)TextSize
+        write(6,'(A)')"setfont"
+        write(6,fmt_color) col_klab
+        write(6,fmt_move) 50+(labelpoint(ilabel)-1.0)*Xsize/(nkpoints-1.0)-&
+             &            TextSize/2.0,50-TextSize
+        write(6,'(A)')"(",label(ilabel)(1:1),") show"
+     enddo
+  end if
+
   close(1)
   return
   ! Goto 200 if the file "bandName" had an error upon reading
-200 write(6,100)"/" // trim(fontName) // " findfont"
-  write(6,101)TextSize," scalefont"
-  write(6,100)"setfont"
-  write(6,100)"newpath"
-  write(6,100)"1 0 0 setrgbcolor"
-  write(6,103)"50 ",Ysize/2+50," moveto"
-  write(6,100)"(Unspecified error while reading file ",&
+  write(6,'(A)')"/" // trim(fontName) // " findfont"
+  write(6,fmt_scale)TextSize
+  write(6,'(A)')"setfont"
+  write(6,'(A)')"newpath"
+  write(6,fmt_color) col_err
+  write(6,fmt_move)50.,Ysize/2+50
+  write(6,'(A)')"(Unspecified error while reading file ",&
        &              bandName,") show"
   call WritePSTail()
   close(1)
   stop
   ! Goto 201 if the file "bandName" ended before the string "END" was read
-201 write(6,100)"/" // trim(fontName) // " findfont"
-  write(6,101)TextSize," scalefont"
-  write(6,100)"setfont"
-  write(6,100)"newpath"
-  write(6,100)"1 0 0 setrgbcolor"
-  write(6,103)"50 ",Ysize/2+50," moveto"
-  write(6,100)"(Unexpected end of file while reading ",&
+201 write(6,'(A)')"/" // trim(fontName) // " findfont"
+  write(6,fmt_scale)TextSize
+  write(6,'(A)')"setfont"
+  write(6,'(A)')"newpath"
+  write(6,fmt_color) col_err
+  write(6,fmt_move)50.,Ysize/2+50
+  write(6,'(A)')"(Unexpected end of file while reading ",&
        &              bandName,") show"
   call WritePSTail()
   stop
   close(1)
-
-100 FORMAT(A)
-101 FORMAT(F12.6,A)
-102 FORMAT(2F12.6,A)
-103 FORMAT(A,F12.6,A)
 end subroutine WritePSKpoints
 
 subroutine WritePSLegend(TextSize, fontName, XSize, YSize, &
-     &                   colors, legend, legentries)
+     &                   legcolors, legend, legentries)
   implicit none
 
-  real*8 TextSize, XSize, YSize
-  real(8) :: colors(:,:)
-  character(*) :: fontName
-  character    :: legend(:)
-  integer      :: legentries(:)
+  real(8),          intent(in) :: TextSize, XSize, YSize
+  real(8),          intent(in) :: legcolors(:,:)
+  character(len=*), intent(in) :: fontName
+  character(len=*), intent(in) :: legend(:)
+  integer,          intent(in) :: legentries(:)
 
-  integer :: i, s=0
-  character(64) l
-  real(8) :: XPos=48, sep
+  integer       :: i, s=0
+  character(64) :: l
+  real(8)       :: XPos=48, sep
 
   sep=.66*TextSize + 1.5*TextSize
 
@@ -389,97 +433,81 @@ subroutine WritePSLegend(TextSize, fontName, XSize, YSize, &
      write(l, '(64A)'), legend(s+1 : legentries(i))
      call WritePSLegE(TextSize, fontName, &
           &           XPos, YSize+70, &
-          &           colors(i, :), l)
+          &           legcolors(:, i), l)
 
      XPos = XPos + sep + .66*len_trim(l)*TextSize
 
      s = legentries(i)
   end do
-
-  XSize=XSize                    ! avoid warning
 end subroutine WritePSLegend
 
 subroutine WritePSLegE(TextSize, fontName, XPos, YPos, Color, Name)
+  use sppv_formats
+  use sppv_colors
+
   implicit none
-  real*8 TextSize, XPos, YPos, Color(3)
+
+  real(8), intent(in) :: TextSize, XPos, YPos, Color(3)
   
-  character(*) Name, fontName
+  character(len=*) :: Name, fontName
   real(8) :: wd, ht, sep
 
   wd=.66*TextSize
   ht=wd
   sep=.5*TextSize
 
-  write(6,100)"/" // trim(fontName) // " findfont"
-  write(6,101)TextSize," scalefont"
-  write(6,100)"setfont"
-  write(6,102) XPos+sep, YPos, " moveto"
-  write(6,105)0d0, 0d0, 0d0, " setrgbcolor"
-  write(6,100)"(", trim(Name) ,") show"
-  write(6,100)"newpath"
-  write(6,102)XPos,    YPos+ht, " moveto"
-  write(6,102)XPos+wd, YPos+ht, " lineto"
-  write(6,102)XPos+wd, YPos,             " lineto"
-  write(6,102)XPos,    YPos,             " lineto"
-  write(6,100)" closepath"
-  write(6,105)Color, " setrgbcolor"
-  write(6,100)" fill"
-  write(6,100)" stroke"
-
-100 FORMAT(A)
-101 FORMAT(F12.6,A)
-102 FORMAT(2F12.6,A)
-105 FORMAT(3F6.3,A)
+  write(6,'(A)')"/" // trim(fontName) // " findfont"
+  write(6,fmt_scale)TextSize
+  write(6,'(A)')"setfont"
+  write(6,fmt_move) XPos+sep, YPos
+  write(6,fmt_color) col_leg
+  write(6,'(A)')"(", trim(Name) ,") show"
+  write(6,'(A)')"newpath"
+  write(6,fmt_move)XPos,    YPos+ht
+  write(6,fmt_line)XPos+wd, YPos+ht
+  write(6,fmt_line)XPos+wd, YPos
+  write(6,fmt_line)XPos,    YPos
+  write(6,'(A)')" closepath"
+  write(6,fmt_color) Color
+  write(6,'(A)')" fill"
+  write(6,'(A)')" stroke"
 end subroutine WritePSLegE
 
-subroutine WritePSBands(qtlName, nkpoints ,Xsize, Ysize, &
+subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
      &                  Efermi, TextSize, Emin, Emax, &
-     &                  CharacterToRGBColor, CharacterToThickness, &
      &                  MaxAtoms, MaxOrbitals, fontName)
+
+  use sppv_formats
+  use sppv_colors
 
   implicit none
 
-  external CharacterToRGBColor, CharacterToThickness
+  character(len=*), intent(in) :: qtlName, fontName
+  integer,          intent(in) :: nkpoints, MaxAtoms, MaxOrbitals
+  real(8),          intent(in) :: Xsize, Ysize, Emin, Emax, Efermi, TextSize
 
-  interface
-     subroutine CharacterToRGBColor(OrbCharacter, RGBColor)
-       use sppv_data
-       real(8), intent(in)  :: OrbCharacter(MaxAtoms, MaxOrbitals)
-       real(8), intent(out) :: RGBColor(3)
-     end subroutine CharacterToRGBColor
+  real(8), parameter :: RydToEv =13.6056981
 
-     subroutine CharacterToThickness(OrbCharacter, Thickness)
-       use sppv_data
-       real(8), intent(in)  :: OrbCharacter(MaxAtoms, MaxOrbitals)
-       real(8), intent(out) :: Thickness
-     end subroutine CharacterToThickness
-  end interface
+  real(8)   :: OrbCharacter(MaxAtoms,MaxOrbitals), RGBColor(3),Thickness
+  real(8)   :: Energy,Eprev,Enow,Enext, ptsPerE,ptsPerK
+  integer   :: OK,nAtom,nOrb(MaxAtoms),i,j,k,junki,iband
+  character :: RDWD*(256)
 
-  character(len=*) :: qtlName, fontName
-  integer          :: nkpoints, MaxAtoms, MaxOrbitals
-  real*8           :: Xsize, Ysize, Emin, Emax, Efermi, TextSize
-
-  real RydToEv
-  parameter (RydToEv=13.6056981)
-
-  real*8 OrbCharacter(MaxAtoms,MaxOrbitals),Thickness,RGBColor(3),&
-       &       Energy,Eprev,Enow,Enext,ThicknessB,RGBColorB(3),&
-       &       ptsPerE,ptsPerK
-  integer OK,nAtom,nOrb(MaxAtoms),i,j,k,junki
-  character RDWD*(256)
+  character(len=*), parameter :: &
+       fmt_L = '(10(F0.4,1X), "L")', fmt_L1 = '(8(F0.4,1X), "L1")'
 
   ptsPerE=Ysize/(Emax-Emin)
   ptsPerK=Xsize/(nkpoints-1)
   ! Open the qtl file
   open(unit=2,file=qtlName,status="old",iostat=OK)
   if(OK.NE.0) then
-     write(6,100)"/" // trim(fontName) // " findfont"
-     write(6,101)TextSize,"12 scalefont"
-     write(6,100)"setfont"
-     write(6,100)"newpath"
-     write(6,100)"1 0 0 setrgbcolor"
-     write(6,103)"50 ",Ysize/2+50," moveto"
-     write(6,100)"(Could not open file",qtlName,") show"
+     write(6,'(A)')"/" // trim(fontName) // " findfont"
+     write(6,fmt_scale)TextSize
+     write(6,'(A)')"setfont"
+     write(6,'(A)')"newpath"
+     write(6,fmt_color) col_err
+     write(6,fmt_move)50.,Ysize/2+50
+     write(6,'(A)')"(Could not open file",qtlName,") show"
      call WritePSTail()
      stop
   endif
@@ -489,13 +517,14 @@ subroutine WritePSBands(qtlName, nkpoints ,Xsize, Ysize, &
 
   ! find out how many atoms and orbitals there are
   nAtom=0
-  read(unit=2,fmt=100,iostat=OK,err=200,end=201) RDWD
-  do while (index(RDWD,"BAND").EQ.0) ! newer Wien2k versions seem to omit the colon in “BAND:”
+  read(unit=2,fmt='(A)',iostat=OK,end=201) RDWD
+  ! newer Wien2k versions seem to omit the colon in “BAND:”
+  do while (index(RDWD,"BAND").EQ.0)
      if(index(RDWD,"JATOM").NE.0) then
         nAtom=nAtom+1
 
         if (nAtom > MaxAtoms) then
-           write(0, '("sppv: maximum number of atoms (", I0, ") exceeded")') &
+           write(0, '("sppv: maximum number of atoms (", I0, ") exceeded")')&
                 MaxAtoms
            call exit(1)
         end if
@@ -516,39 +545,38 @@ subroutine WritePSBands(qtlName, nkpoints ,Xsize, Ysize, &
            end if
         enddo
      endif
-     read(unit=2,fmt=100,iostat=OK,err=200,end=201) RDWD
+     read(unit=2,fmt='(A)',iostat=OK,end=201) RDWD
   enddo
   ! add the intersitial character
   nAtom=nAtom+1
   nOrb(nAtom)=1
   ! read nkpoints k points then read the string BAND: XX if the 
   ! string BAND: XX can not be read while EOF has been reached stop
+  iband=0
   do
+     iband=iband+1
      do i = 1, nkpoints
         do j = 1, nAtom
-           read(unit=2,fmt=*,iostat=OK,err=200,end=201) Energy,junki,&
+           read(unit=2,fmt=*,iostat=OK,end=201) Energy,junki,&
                 &                            (OrbCharacter(j,k),k=1,nOrb(j))
            Energy=(Energy-Efermi)*RydToEv
         enddo
 
-        call CharacterToThickness(OrbCharacter, Thickness)
-        call CharacterToRGBColor (OrbCharacter, RGBColor)
+        Thickness = CharacterToThickness(OrbCharacter)
+        RGBColor  = CharacterToRGBColor (OrbCharacter)
 
         if(i.EQ.1)then
            Eprev=Energy
-           RGBColorB=RGBColor
-           ThicknessB=Thickness
         elseif(i.EQ.2)then
            Enow=Energy
            if((Eprev.GT.Emin).AND.(Eprev.LT.Emax).AND.&
                 &    (((Eprev+Enow)/2.0).GT.Emin).AND.(((Eprev+Enow)/2.0).LT.Emax)) &
                 &  then
-              write(6,105)50+(i-2.0)*ptsPerK,50+(Eprev-Emin)*ptsPerE, &
-                   &                50+(i-1.5)*ptsPerK,50+(0.5*(Enow+Eprev)-Emin)* &
-                   &                ptsPerE,RGBColorB,ThicknessB," L1"
+              write(6,fmt_L1) &
+                   50+(i-2.0)*ptsPerK, 50+(Eprev-Emin)           *ptsPerE, &
+                   50+(i-1.5)*ptsPerK, 50+(0.5*(Enow+Eprev)-Emin)*ptsPerE, &
+                   RGBColor,Thickness
            endif
-           RGBColorB=RGBColor
-           ThicknessB=Thickness
         else
            Enext=Energy
            if((Enow.GT.Emin).AND.(Enow.LT.Emax).AND. &
@@ -556,72 +584,72 @@ subroutine WritePSBands(qtlName, nkpoints ,Xsize, Ysize, &
                 &     (0.5*(Enow+Eprev).LT.Emax).AND.  &
                 &     (0.5*(Enow+Enext).GT.Emin).AND.  &
                 &     (0.5*(Enow+Enext).LT.Emax))then
-              write(6,106)50+(i-2.5)*ptsPerK,50+(0.5*(Eprev+Enow)-Emin)* &
-                   &                ptsPerE,50+(i-2.0)*ptsPerK,50+(Enow-Emin)* &
-                   &                ptsPerE,50+(i-1.5)*ptsPerK,50+(0.5*(Enext+Enow)- &
-                   &                Emin)*ptsPerE,RGBColorB,ThicknessB," L"
+              write(6,fmt_L) &
+                   50+(i-2.5)*ptsPerK,50+(0.5*(Eprev+Enow)-Emin)*ptsPerE, &
+                   50+(i-2.0)*ptsPerK,50+(Enow-Emin)            *ptsPerE, &
+                   50+(i-1.5)*ptsPerK,50+(0.5*(Enext+Enow)-Emin)*ptsPerE, &
+                   RGBColor,Thickness
            elseif((Enow.GT.Emin).AND.(Enow.LT.Emax).AND. &
                 &     (0.5*(Enow+Eprev).GT.Emin).AND. &
                 &     (0.5*(Enow+Eprev).LT.Emax))then
-              write(6,105)50+(i-2.5)*ptsPerK,50+(0.5*(Eprev+Enow)-Emin)* &
-                   &                ptsPerE,50+(i-2.0)*ptsPerK,50+(Enow-Emin)* &
-                   &                ptsPerE,RGBColorB,ThicknessB," L1"
+              write(6,fmt_L1) &
+                   50+(i-2.5)*ptsPerK, 50+(0.5*(Eprev+Enow)-Emin)*ptsPerE, &
+                   50+(i-2.0)*ptsPerK, 50+(Enow-Emin)            *ptsPerE, &
+                   RGBColor,Thickness
            elseif((Enow.GT.Emin).AND.(Enow.LT.Emax).AND. &
                 &     (0.5*(Enow+Enext).GT.Emin).AND. &
                 &     (0.5*(Enow+Enext).LT.Emax))then
-              write(6,105)50+(i-1.5)*ptsPerK,50+(0.5*(Enext+Enow)-Emin)* &
-                   &                ptsPerE,50+(i-2.0)*ptsPerK,50+(Enow-Emin)* &
-                   &                ptsPerE,RGBColorB,ThicknessB," L1"
+              write(6,fmt_L1) &
+                   50+(i-1.5)*ptsPerK, 50+(0.5*(Enext+Enow)-Emin)*ptsPerE, &
+                   50+(i-2.0)*ptsPerK, 50+(Enow-Emin)            *ptsPerE, &
+                   RGBColor,Thickness
            endif
-           RGBColorB=RGBColor
-           ThicknessB=Thickness
            if(i.EQ.nkpoints)then
               if((Enext.GT.Emin).AND.(Enext.LT.Emax).AND. &
                    &    (((Enext+Enow)/2.0).GT.Emin).AND.(((Enext+Enow)/2.0).LT.Emax)) &
                    &   then
-                 write(6,105)50+(i-1.0)*ptsPerK,50+(Enext-Emin)*ptsPerE, &
-                      &                50+(i-1.5)*ptsPerK,50+(0.5*(Enow+Enext)-Emin)* &
-                      &                ptsPerE,RGBColorB,ThicknessB," L1"
+                 write(6,fmt_L1) &
+                      50+(i-1.0)*ptsPerK, 50+(Enext-Emin)           *ptsPerE, &
+                      50+(i-1.5)*ptsPerK, 50+(0.5*(Enow+Enext)-Emin)*ptsPerE, &
+                      RGBColor, Thickness
               endif
            endif
+
            Eprev=Enow
            Enow=Enext
         endif
      enddo
      ! read the string BAND: XX or iff EOF finished
-     read(unit=2,fmt=100,iostat=OK,err=200,end=300) RDWD
+     read(unit=2,fmt='(A)',iostat=OK,end=300) RDWD
   enddo
 300 continue
   close(2)
   return
   ! Goto 200 if the file "qtlName" had an error upon reading
-200 write(6,100)"/" // trim(fontName) // " findfont"
-  write(6,101)TextSize," scalefont"
-  write(6,100)"setfont"
-  write(6,100)"newpath"
-  write(6,100)"1 0 0 setrgbcolor"
-  write(6,103)"50 ",Ysize/2+50," moveto"
-  write(6,100)"(Unspecified error while reading file ", &
+  write(6,'(A)')"/" // trim(fontName) // " findfont"
+  write(6,fmt_scale)TextSize
+  write(6,'(A)')"setfont"
+  write(6,'(A)')"newpath"
+  write(6,fmt_color) col_err
+  write(6,fmt_move)50.,Ysize/2+50
+  write(6,'(A)')"(Unspecified error while reading file ", &
        &              qtlName,") show"
   call WritePSTail()
   close(2)
   stop
   ! Goto 201 if the file "qtlName" ended before the end was expected
-201 write(6,100)"/" // trim(fontName) // " findfont"
-  write(6,101)TextSize," scalefont"
-  write(6,100)"setfont"
-  write(6,100)"newpath"
-  write(6,100)"1 0 0 setrgbcolor"
-  write(6,103)"50 ",Ysize/2+50," moveto"
-  write(6,100)"(Unexpected end of file while reading ", &
+201 write(6,'(A)')"/" // trim(fontName) // " findfont"
+  write(6,fmt_scale)TextSize
+  write(6,'(A)')"setfont"
+  write(6,'(A)')"newpath"
+  write(6,fmt_color) col_err
+  write(6,fmt_move)50.,Ysize/2+50
+  write(6,'(A)')"(Unexpected end of file while reading ", &
        &              qtlName,") show"
   call WritePSTail()
   stop
   close(2)
-
-100 FORMAT(A)
-101 FORMAT(F12.6,A)
-103 FORMAT(A,F12.6,A)
-105 FORMAT(8F10.4,A)
-106 FORMAT(10F10.4 A)
 end subroutine WritePSBands
+end subroutine SpaghettiPrimavera
+
+!! Time-stamp: <2015-09-14 16:05:19 assman@faepop23.tu-graz.ac.at>
