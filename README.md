@@ -144,9 +144,8 @@ about prima.py should go to <elias.assmann@gmail.com>.
 ACKNOWLEDGEMENTS
 ----------------
 
-The author of the original SpaghettiPrimavera.f90 is Maurits
-W. Haverkort <Maurits@physics.ubc.ca>.  Thanks to Maurits for letting
-me build upon his code.
+Thanks to Maurits ⟨Maurits@physics.ubc.ca⟩ for letting me build upon
+his code.
 
 Hex colors and color names are handled by the `webcolors` module,
 written by James Bennett.
