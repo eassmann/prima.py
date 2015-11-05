@@ -23,14 +23,15 @@ from sppv import spaghettiprimavera, sppv_data as sppv
 import os, sys, re, getopt, numpy, collections, webcolors, contextlib, \
   traceback, subprocess, warnings
 
-def svn_rev():
-    rev = "$Rev: 618 $"
+def git_version():
+    rev = "$version:$"
     try:
-        return '-r' + re.search('(\d+)', rev).group()
+        return re.search(":\s*(.*?)\s*\$", rev).group(1)
     except:
-        return ''
+        return 'unknown'
 
-__version__ = "0.3" + svn_rev()
+
+__version__ = git_version()
 sppv.version[:] = __version__
 
 def carp(thing):

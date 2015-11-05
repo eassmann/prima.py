@@ -1,5 +1,5 @@
 
-#                            prima.py 0.3
+#                            prima.py 1.0-rc1
 
 
 USAGE
