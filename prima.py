@@ -6,9 +6,7 @@
 ##
 ## Copyright 2013-2015 Elias Assmann <elias.assmann@gmail.com>
 
-## prima.py version 0.3
-##
-## $Id: prima.py 618 2015-09-14 15:58:11Z assmann $
+## prima.py $version:$
 
 ##
 ##	Vom Eise befreit sind Strom und Bäche
