@@ -29,7 +29,7 @@ inequivalent atom in the struct.  A typical command line might be
 if  that atom  has  `ISPLIT=2`.   If instead  it  has `ISPLIT=8`,  the
 command would read:
 ```
-   prima.py 1:DXY+DXZ+DYZ:5,0,0:3 1:DX2Y2+DZ2:0,0,5:3 -o prima.ps`
+   prima.py 1:DXY++DXZ++DYZ:5,0,0:3 1:DX2Y2++DZ2:0,0,5:3 -o prima.ps`
 ```
 which is an abbreviated form of
 ```
@@ -144,8 +144,8 @@ about prima.py should go to <elias.assmann@gmail.com>.
 ACKNOWLEDGEMENTS
 ----------------
 
-Thanks to Maurits ⟨Maurits@physics.ubc.ca⟩ for letting me build upon
-his code.
+Thanks to Maurits ⟨Maurits.Haverkort@cpfs.mpg.de⟩ for letting me build
+upon his code.
 
 Hex colors and color names are handled by the `webcolors` module,
 written by James Bennett.
