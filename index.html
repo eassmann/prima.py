@@ -29,21 +29,11 @@
     <div class="container">
       <section id="main_content">
         <h1>
-<a id="primapy-10-rc1" class="anchor" href="#primapy-10-rc1" aria-hidden="true"><span class="octicon octicon-link"></span></a>prima.py 1.0-rc1</h1>
-
-<h2>
-<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>USAGE</h2>
+<a id="primapy" class="anchor" href="#primapy" aria-hidden="true"><span class="octicon octicon-link"></span></a>prima.py</h1>
 
 <p>This is a wrapper script for <a href="http://www.cpfs.mpg.de/haverkort/spaghetti_primavera">Maurits Haverkort's <code>SpaghettiPrimavera.f90</code></a>.
 It produces the same kind of plots but should provide a simple
-interface.  Like <code>SpaghettiPrimavera.f90</code>, it needs a <code>$case.qtl</code> and a
-<code>$case.klist_band</code> file; furthermore it reads <code>$case.struct</code> if present.</p>
-
-<p>If it exists, <code>$case.qtl[up|dn]_band</code> is preferred over
-<code>$case.qtl[up|dn]</code>.  (Wien2k does not use <code>.qtl_band</code> but it may be
-convenient to rename a <code>.qtl</code> file intended for band structures.)</p>
-
-<p>See <code>prima.py -h</code> and <code>prima.py</code> (executed in a suitable <a href="http://wien2k.at">Wien2k</a> directory) for usage hints.</p>
+interface.</p>
 
 <h3>
 <a id="an-example" class="anchor" href="#an-example" aria-hidden="true"><span class="octicon octicon-link"></span></a>An Example</h3>
@@ -54,107 +44,10 @@ inequivalent atom in the struct.  A typical command line might be</p>
 <pre><code>   prima.py 1:D-t2g:5,0,0:3 1:D-eg:0,0,5:3 -o prima.ps
 </code></pre>
 
-<p>if  that atom  has  <code>ISPLIT=2</code>.   If instead  it  has <code>ISPLIT=8</code>,  the
-command would read:</p>
-
-<pre><code>   prima.py 1:DXY+DXZ+DYZ:5,0,0:3 1:DX2Y2+DZ2:0,0,5:3 -o prima.ps`
-</code></pre>
-
-<p>which is an abbreviated form of</p>
-
-<pre><code>   prima.py 1:DXY:5,0,0:3 1:DXZ:5,0,0:3 1:DYZ:5,0,0:3 \
-            1:DX2Y2:0,0,5:3 1:DZ2:0,0,5:3 -o prima.ps
-</code></pre>
-
 <p>Each of the non-option arguments names an atom, an orbital, a color, a
 thickness increment, and a description for the (optional) legend;
 these tokens are separated by colons <code>:</code>, and each of them may be
 empty.</p>
-
-<h3>
-<a id="specification-of-atoms-and-orbitals" class="anchor" href="#specification-of-atoms-and-orbitals" aria-hidden="true"><span class="octicon octicon-link"></span></a>Specification of Atoms and Orbitals</h3>
-
-<p>The ampersand <code>&amp;</code> combines two orbitals or two sites.  Since it must
-be escaped in most shells, a double plus sign <code>++</code> may be used instead
-(a single <code>+</code> appears in some orbital descriptions in <code>.qtl</code> files).</p>
-
-<p>For both the atom and the orbital specification, you can use a number
-(in the sequence of <code>$case.struct</code> or <code>$case.qtl</code>) or a name (labels
-as given in the same files).  Furthermore, the following special atom
-names are accepted:</p>
-
-<ul>
-<li>
-<code>all</code>  → all atoms</li>
-<li>
-<code>istl</code> → the interstitial</li>
-<li>
-<code>Z$N</code>  → all atoms with atomic number <code>$N</code>
-</li>
-<li>
-<code>$Sy</code>  → the atomic symbol expands to all atoms of that element</li>
-</ul>
-
-<p>The atomic symbol applies only if you have several inequivalent atoms
-of the same element.  As long as you follow the Wien2k convention for
-the struct labels (atomic symbol in the first two places, a number in
-the third), there can be no ambiguity with these special cases.</p>
-
-<p>All atom and orbital specifications are case insensitive.</p>
-
-<h3>
-<a id="colors-and-normalization" class="anchor" href="#colors-and-normalization" aria-hidden="true"><span class="octicon octicon-link"></span></a>Colors and Normalization</h3>
-
-<p>Colors can be named in three ways: as a comma-separated triple <code>r,g,b</code>
-of red, green, blue values (nominally ∈ [0, 1]), in HTML-type
-hexadecimal notation <code>#RRGGBB</code>, or one of the <a href="http://www.w3.org/TR/SVG11/types.html#ColorKeywords">147 color names defined
-in SVG</a>.</p>
-
-<p>The QTL values from Wien2k, when the interstitial is included, are
-normalized to 1, but how much of this weight is contained in a
-particular muffin-tin sphere depends on a number of things.  This
-leads to a “normalization problem”; since there is no general
-solution, <code>prima.py</code> simply multiplies the colors and thickness
-increments by the QTL values and adds them.  Therefore, it can be
-useful to have r,g,b &gt; 1.  To make this easier, the color may be
-prefixed by a factor: <code>$f × $color</code>.</p>
-
-<p>In general, colored spaghetti are not a quantitative tool, and care
-must be taken in their interpretation, especially concerning the
-normalization and mixing of colors.</p>
-
-<h3>
-<a id="configuration-files" class="anchor" href="#configuration-files" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuration Files</h3>
-
-<p>The option <code>-C|--config-file</code> may be used to read options from a file
-in addition to the command line.  Each line in the config file(s)
-should contain one option and, if applicable, its argument, separated
-by whitespace.  Any option valid on the command line may be used,
-leading dashes may be omitted.  For instance, if, by default, you want
-to suppress the minor ticks, add a legend, and output to
-<code>$case_prima.ps</code>, then put the following into <code>~/.prima</code></p>
-
-<pre><code>   minor-ticks  0
-   write-legend
-   out-suffix   _prima.ps
-</code></pre>
-
-<p>and add</p>
-
-<pre><code>   alias prima.py="prima.py -C ~/.prima"
-</code></pre>
-
-<p>to your <code>~/.bashrc</code> or equivalent.  Beside a global config file, it
-can also be useful to have per-directory configuration.  This could be
-implemented by</p>
-
-<pre><code>  alias prima.py='prima.py $(test -e .prima &amp;&amp; echo "-C .prima")'
-</code></pre>
-
-<p>Parsing of the config files is primitive.  Lines are skipped if they
-are empty or start with a hash <code>#</code>.  Leading whitespace and whitespace
-between option and argument is stripped, but trailing whitespace is
-preserved.</p>
 
 <h2>
 <a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>INSTALLATION</h2>
@@ -172,29 +65,6 @@ a modern Fortran compiler.  I tested it with the following versions:</p>
 <li>
 <a href="https://gcc.gnu.org/fortran/">gfortran</a>       4.9.2</li>
 </ul>
-
-<p>Running <code>make</code> in the <code>prima</code> directory should produce the file
-<code>sppv.so</code>.  Python must be able to find this file, and the file
-<code>webcolors.py</code>.  This is easiest if you create a symlink to prima.py
-in some directory in your $PATH, or add the <code>prima</code> directory to your
-$PATH.</p>
-
-<h2>
-<a id="comments-and-suggestions" class="anchor" href="#comments-and-suggestions" aria-hidden="true"><span class="octicon octicon-link"></span></a>COMMENTS and SUGGESTIONS</h2>
-
-<p>about prima.py should go to <a href="mailto:elias.assmann@gmail.com">elias.assmann@gmail.com</a>.</p>
-
-<h2>
-<a id="acknowledgements" class="anchor" href="#acknowledgements" aria-hidden="true"><span class="octicon octicon-link"></span></a>ACKNOWLEDGEMENTS</h2>
-
-<p>Thanks to Maurits ⟨<a href="mailto:Maurits@physics.ubc.ca">Maurits@physics.ubc.ca</a>⟩ for letting me build upon
-his code.</p>
-
-<p>Hex colors and color names are handled by the <code>webcolors</code> module,
-written by James Bennett.</p>
-
-<p>Thanks to Peter Blaha and Manuel Zingl for valuable comments on
-previous versions.</p>
       </section>
     </div>
 
