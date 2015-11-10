@@ -152,3 +152,6 @@ written by James Bennett.
 
 Thanks to Peter Blaha and Manuel Zingl for valuable comments on
 previous versions.
+
+`prima.py` was developed at [Vienna](http://www.ifp.tuwien.ac.at/cms)
+and [Graz](https://itp.tugraz.at/) Universities of Technology.
