@@ -327,7 +327,7 @@ subroutine WritePSKpoints(bandName, NKpoints, Xsize, Ysize, AxesThickness, &
   integer   :: OK,nlabels,labelpoint(100),ilabel
   character :: RDWD*(128),label(100)*(2)
 
-  open(unit=1,file=bandName,status="old",iostat=OK)
+  open(unit=1, file=bandName, action='read', iostat=OK)
   if(OK.NE.0) then
      write(6,'(A)')"/" // trim(fontName) // " findfont"
      write(6,fmt_scale) TextSize
@@ -499,7 +499,7 @@ subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
   ptsPerE=Ysize/(Emax-Emin)
   ptsPerK=Xsize/(nkpoints-1)
   ! Open the qtl file
-  open(unit=2,file=qtlName,status="old",iostat=OK)
+  open(unit=2, file=qtlName, action='read', iostat=OK)
   if(OK.NE.0) then
      write(6,'(A)')"/" // trim(fontName) // " findfont"
      write(6,fmt_scale)TextSize
@@ -559,8 +559,8 @@ subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
         do j = 1, nAtom
            read(unit=2,fmt=*,iostat=OK,end=201) Energy,junki,&
                 &                            (OrbCharacter(j,k),k=1,nOrb(j))
-           Energy=(Energy-Efermi)*RydToEv
         enddo
+        Energy=(Energy-Efermi)*RydToEv
 
         Thickness = CharacterToThickness(OrbCharacter)
         RGBColor  = CharacterToRGBColor (OrbCharacter)
