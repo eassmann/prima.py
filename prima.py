@@ -188,7 +188,8 @@ def print_help(x):
 
     sys.exit()
 
-spin=''
+spin = ''
+mix  = False
 def do_up(x):
     global spin
     spin='up'
@@ -197,13 +198,21 @@ def do_dn(x):
     global spin
     spin='dn'
     print>>log, 'set spin = ‘'+spin+'’'
-def do_updn(x):
-    global spin
-    spin='updn'
-    print>>log, 'set spin = ‘'+spin+'’'
 def no_spin(x):
     global spin
     spin=''
+def do_mix(x):
+    global spin, mix
+    spin = 'updn'
+    mix  = True
+    print>>log, 'mix spins'
+    print>>log, 'set spin = ‘'+spin+'’'
+def do_join(x):
+    global spin, mix
+    spin = 'updn'
+    mix  = False
+    print>>log, 'join spins'
+    print>>log, 'set spin = ‘'+spin+'’'
 
 class nofile(object):
     def write(self, string):
@@ -289,8 +298,9 @@ sppv_options = [
 prima_options = [
     ('u',  'up',              do_up,         '\tsp: up'),
     ('d',  'dn',              do_dn,         '\tsp: down'),
-    ('x',  'updn',            do_updn,       '\tmix spins'),
-    ('N', 'no-spin',          no_spin,       '\tnon-spin-polarized'),
+    ('x',  'mix-spins',       do_mix,        '\tmix spins  [equal energies forced]'),
+    ('j',  'join-spins',      do_join,       'join spins [energies may be different]'),
+    ('N',  'no-spin',         no_spin,       '\tnon-spin-polarized'),
     ('o:', 'out-file=',       outname,       'send output here instead of STDOUT'),
     ('a:', 'out-suffix=',     suffixname,    'send output to $case$suffix instead of STDOUT'),
     ('C:', 'config-file=',    confname,      'read options from here'),
@@ -410,7 +420,7 @@ if qtlfile    is None:
         print>>log, '   qtl1= ‘'+qtlfile1+'’'
     print>>log,     '   qtl = ‘'+qtlfile +'’'
 elif spin=='updn' and  qtlfile1 is None:
-    croak('need 0 or 2 qtl files in --updn mode, not 1')
+    croak('need 0 or 2 qtl files in updn mode, not 1')
 
 if bandfile   is None:
     bandfile         = case + '.klist_band'
@@ -707,7 +717,7 @@ if not atms:
 
 ### Real Work ###
 
-## In ‘updn’ mode, open a pipe to ‘paste’ the two qtl files
+## In ‘updn’ mode, open a pipe to paste the two qtl files together.  
 if spin=='updn':
     print>>log
     print>>log, 'Opening pipe to paste together ‘up’ and ‘dn’ qtl files …'
@@ -749,22 +759,40 @@ if spin=='updn':
                     l2 = q2.readline()
 
                 # header done, l1 and l2 contain “BAND 1”; print extra
-                # line for interstitial
+                # line for the extra interstitial
                 print>>qtl, 'JATOM X interstitial'
-                print>>qtl, l1,
 
-                for l1 in q1:
-                    l2 = q2.readline()
+                nk=0
+                while l1:
+                    nk += 1
                     print>>qtl, l1,
 
-                    if 'BAND' not in l1:
-                        print>>qtl, l2,
+                    l1 = q1.readline()
 
+                    # handling of the q2 file depends on mix/join
+                    if mix:
+                        l2 = q2.readline()
+                        if not l2.startswith(' BAND'):
+                            print>>qtl, l2,
+                    else:
+                        if not l1 or l1.startswith(' BAND'):
+                            print>>qtl, l2,
+                            for k in range(nk-1):
+                                l2 = q2.readline()
+                                print>>qtl, ' 0'*20
+                                print>>qtl, l2,
+                            nk=0
+                        else:
+                            print>>qtl, ' 0'*20
+
+
+            os.unlink(qtlpipe)
             sys.exit()
     except EnvironmentError as e:
         croak(('error opening pipe for --updn qtl:', e))
     finally:
-        os.unlink(qtlpipe)
+        if os.path.exists(qtlpipe):
+            os.unlink(qtlpipe)
 
     print>>log, 'Using named pipe ‘'+qtlpipe+'’as qtl file'
 
