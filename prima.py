@@ -258,6 +258,7 @@ def scfname(x):
     print>>log, 'set scf file = ‘'+x+'’'
 
 case = os.getcwd().split(os.sep)[-1]
+print>>log, case
 def casename(x):
     global case
     case = x
@@ -779,11 +780,12 @@ if spin=='updn':
                             print>>qtl, l2,
                             for k in range(nk-1):
                                 l2 = q2.readline()
-                                print>>qtl, ' 0'*20
                                 print>>qtl, l2,
+                                print>>qtl, l2[0:14], ' 0'*20
                             nk=0
+                            l2 = q2.readline()
                         else:
-                            print>>qtl, ' 0'*20
+                            print>>qtl, l1[0:14], ' 0'*20
 
 
             os.unlink(qtlpipe)
