@@ -140,14 +140,21 @@ in some directory in your $PATH, or add the `prima` directory to your
 $PATH.
 
 
+MORE INFORMATION
+----------------
+
+The [wiki](https://github.com/eassmann/prima.py/wiki) has a set of
+[example plots](https://github.com/eassmann/prima.py/wiki/Examples)
+made with prima.py.  Questions regarding the usage of `prima.py` could
+be appropriate for the [Wien2k mailing list](http://www.wien2k.at/reg_user/mailing_list/).
+
+
 CONTRIBUTING
 ------------
 
 Bug reports and fixes, suggestions, and so on should be submitted via
 GitHub as [Issues](https://github.com/eassmann/prima.py/issues) or
 [Pull Requests](https://github.com/eassmann/prima.py/pulls).
-Questions regarding the usage of `prima.py` could be appropriate for
-the [Wien2k mailing list](http://www.wien2k.at/reg_user/mailing_list/).
 
 
 ACKNOWLEDGEMENTS
