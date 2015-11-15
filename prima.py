@@ -6,8 +6,6 @@
 ##
 ## Copyright 2013-2015 Elias Assmann <elias.assmann@gmail.com>
 
-## prima.py $version:v0.2-29-g269d1a1$
-
 ##
 ##	Vom Eise befreit sind Strom und Bäche
 ##	Durch des Frühlings holden, belebenden Blick,
@@ -22,7 +20,7 @@ import os, sys, re, getopt, numpy, collections, webcolors, contextlib, \
   traceback, subprocess, warnings
 
 def git_version():
-    rev = "$version:v0.2-29-g269d1a1$"
+    rev = "$version:v0.2-30-gb50423c$"
     try:
         return re.search(":\s*(.*?)\s*\$", rev).group(1)
     except:
