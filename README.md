@@ -7,7 +7,7 @@ USAGE
 
 This is a wrapper script for [Maurits Haverkort's `SpaghettiPrimavera.f90`]
 (http://www.cpfs.mpg.de/haverkort/spaghetti_primavera).
-It produces the same kind of plots but should provide a simple
+It produces the same kind of plots but should provide a simpler
 interface.  Like `SpaghettiPrimavera.f90`, it needs a `$case.qtl` and a
 `$case.klist_band` file; furthermore it reads `$case.struct` if present.
 

@@ -6,7 +6,7 @@
 ##
 ## Copyright 2013-2015 Elias Assmann <elias.assmann@gmail.com>
 
-## prima.py $version:$
+## prima.py $version:v0.2-29-g269d1a1$
 
 ##
 ##	Vom Eise befreit sind Strom und Bäche
@@ -22,7 +22,7 @@ import os, sys, re, getopt, numpy, collections, webcolors, contextlib, \
   traceback, subprocess, warnings
 
 def git_version():
-    rev = "$version:$"
+    rev = "$version:v0.2-29-g269d1a1$"
     try:
         return re.search(":\s*(.*?)\s*\$", rev).group(1)
     except:
