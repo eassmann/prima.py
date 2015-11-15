@@ -7,3 +7,4 @@
 *.pyc
 sppv.so
 TAGS
+.gitignore

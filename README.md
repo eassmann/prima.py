@@ -1,5 +1,5 @@
 
-#                            prima.py 1.0-rc1
+#                            prima.py 0.3
 
 
 USAGE
@@ -120,6 +120,11 @@ preserved.
 INSTALLATION
 ------------
 
+To download `prima.py`, go to the [GitHub page](https://github.com/eassmann/prima.py)
+and download from `master` for the cutting-edge version, or get the
+latest [release](https://github.com/eassmann/prima.py/releases) if you
+prefer more stable code.
+
 `prima.py` needs Python 2, NumPy, F2PY (which is now part of NumPy), and
 a modern Fortran compiler.  I tested it with the following versions:
 
@@ -135,10 +140,21 @@ in some directory in your $PATH, or add the `prima` directory to your
 $PATH.
 
 
-COMMENTS and SUGGESTIONS
-------------------------
+MORE INFORMATION
+----------------
 
-about prima.py should go to <elias.assmann@gmail.com>.
+The [wiki](https://github.com/eassmann/prima.py/wiki) has a set of
+[example plots](https://github.com/eassmann/prima.py/wiki/Examples)
+made with prima.py.  Questions regarding the usage of `prima.py` could
+be appropriate for the [Wien2k mailing list](http://www.wien2k.at/reg_user/mailing_list/).
+
+
+CONTRIBUTING
+------------
+
+Bug reports and fixes, suggestions, and so on should be submitted via
+GitHub as [Issues](https://github.com/eassmann/prima.py/issues) or
+[Pull Requests](https://github.com/eassmann/prima.py/pulls).
 
 
 ACKNOWLEDGEMENTS
