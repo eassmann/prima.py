@@ -88,6 +88,17 @@ must be taken in their interpretation, especially concerning the
 normalization and mixing of colors.
 
 
+### Mixing spins
+
+The options `-m|--mix-spins` and `-j|--join-spins` may be used to
+combine data from two ‘qtl’ files (normally `up` and `dn` spin) in one
+plot.  While `-m` adds the character from the two files together and
+imposes the energies to be the same, `-j` draws separate lines.
+
+The file names default to `$case.qtl{up,dn}_band` and may be set by
+giving `--qtl` twice.
+
+
 ### Configuration Files
 
 The option `-C|--config-file` may be used to read options from a file
