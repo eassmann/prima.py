@@ -8,12 +8,13 @@ USAGE
 This is a wrapper script for [Maurits Haverkort's `SpaghettiPrimavera.f90`]
 (http://www.cpfs.mpg.de/haverkort/spaghetti_primavera).
 It produces the same kind of plots but should provide a simpler
-interface.  Like `SpaghettiPrimavera.f90`, it needs a `$case.qtl` and a
-`$case.klist_band` file; furthermore it reads `$case.struct` if present.
+interface.  Like `SpaghettiPrimavera.f90`, it needs a`$case.klist_band`
+and a corresponding `$case.qtl` file; it also reads `$case.struct` if
+present.
 
-If it exists, `$case.qtl[up|dn]_band` is preferred over
-`$case.qtl[up|dn]`.  (Wien2k does not use `.qtl_band` but it may be
-convenient to rename a `.qtl` file intended for band structures.)
+If it exists, `$case.qtl[up|dn]_band` is preferred over `$case.qtl[up|dn]`.
+(Wien2k does not use `.qtl_band` but it is often convenient to rename
+a `.qtl` file intended for band structures.)
 
 See `prima.py -h` and `prima.py` (executed in a suitable [Wien2k]
 (http://wien2k.at) directory) for usage hints.
