@@ -20,7 +20,8 @@ import os, sys, re, getopt, numpy, collections, webcolors, contextlib, \
   traceback, subprocess, warnings
 
 def git_version():
-    rev = "$version:v0.2.0-31-gba00868$"
+    rev = "$version:v0.2.0-29-g582dece$"
+
     try:
         return re.search(":\s*(.*?)\s*\$", rev).group(1)
     except:
@@ -297,7 +298,7 @@ sppv_options = [
 prima_options = [
     ('u',  'up',              do_up,         '\tsp: up'),
     ('d',  'dn',              do_dn,         '\tsp: down'),
-    ('x',  'mix-spins',       do_mix,        '\tmix spins  [equal energies forced]'),
+    ('m',  'mix-spins',       do_mix,        '\tmix spins  [equal energies forced]'),
     ('j',  'join-spins',      do_join,       'join spins [energies may be different]'),
     ('N',  'no-spin',         no_spin,       '\tnon-spin-polarized'),
     ('o:', 'out-file=',       outname,       'send output here instead of STDOUT'),
@@ -762,7 +763,7 @@ if spin=='updn':
                 print>>qtl, 'JATOM X interstitial'
 
                 nk=0
-                while l1:
+                while l1 and l2:
                     nk += 1
                     print>>qtl, l1,
 
@@ -790,9 +791,6 @@ if spin=='updn':
             sys.exit()
     except EnvironmentError as e:
         croak(('error opening pipe for --updn qtl:', e))
-    finally:
-        if os.path.exists(qtlpipe):
-            os.unlink(qtlpipe)
 
     print>>log, 'Using named pipe ‘'+qtlpipe+'’as qtl file'
 

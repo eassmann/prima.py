@@ -3,7 +3,9 @@ Version 0.3.0 (2015-11-xx):
  * new options to combine spins in one plot
    * `--mix-spins` forces the energies to be equal for both spins and
      mixes characters together to draw a single set of lines
+     (may be better for antiferromagnetism)
    * `--join-spins` draws separate lines for each spin in one plot
+     (more appropriate for ferromagnetism)
 
  * new options `--out-suffix`, `--config-file`, `--verbose`
 
