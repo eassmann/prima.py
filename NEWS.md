@@ -3,7 +3,9 @@ Version 0.3 (2015-11-xx):
  * add options to combine spins in one plot
    * `--mix-spins` forces the energies to be equal for both spins and
      mixes characters together to draw a single set of lines
+     (may be better for antiferromagnetism)
    * `--join-spins` draws separate lines for each spin in one plot
+     (more appropriate for ferromagnetism)
 
  * read Fermi energy from `case.scf` rather than `case.scf2`; do not
    require it unless needed
