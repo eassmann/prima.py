@@ -95,6 +95,9 @@ combine data from two ‘qtl’ files (normally `up` and `dn` spin) in one
 plot.  While `-m` adds the character from the two files together and
 imposes the energies to be the same, `-j` draws separate lines.
 
+The spin can be selected by appending `↑`/`↓`/`↑↓` (or `-up`/`-dn`/
+`updn`) to a regular atom specification, e.g. `1↑`, `all-dn`.
+
 The file names default to `$case.qtl{up,dn}_band` and may be set by
 giving `--qtl` twice.
 

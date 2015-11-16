@@ -1,16 +1,16 @@
-Version 0.3.0 (2015-11-xx):
+Version 0.3.0 (2015-11-16):
 
- * new options to combine spins in one plot
-   * `--mix-spins` forces the energies to be equal for both spins and
-     mixes characters together to draw a single set of lines
+ * new options to combine spins in one plot:
+   * `--mix-spins` adds the characters together to draw a single set
+     of lines, forcing the energies to be equal for both spins
      (may be better for antiferromagnetism)
    * `--join-spins` draws separate lines for each spin in one plot
      (more appropriate for ferromagnetism)
 
  * new options `--out-suffix`, `--config-file`, `--verbose`
 
- * changed delimiter for combined atoms/orbitals to `++|&` to avoid
-   clash with orbital names that contain `+`
+ * change delimiter for combined atoms/orbitals to `++` (or `&`) to
+   avoid clash with orbital names that contain `+`
 
  * make atoms and orbitals case insensitive
 
