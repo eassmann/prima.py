@@ -1,4 +1,4 @@
-`prima.py` is free software: you  can redistribute it and/or modify it
+‘prima.py’ is free software: you  can redistribute it and/or modify it
 under the terms of the GNU  General Public License as published by the
 Free Software Foundation, either version  2 of the License (reproduced
 below), or (at your option) any later version.
@@ -7,6 +7,11 @@ It is distributed in the hope that it will be useful, but *without any
 warranty*;  without even  the implied  warranty of  merchantability or
 fitness for a particular purpose.   See the GNU General Public License
 for more details.
+
+There is no paper to cite for ‘prima.py’.  An acknowledgement would be
+appreciated but is not required.  If you find bugs or have suggestions
+for  features that  you think  would be  important, please  contribute
+through GitHub.
 
 
                     GNU GENERAL PUBLIC LICENSE

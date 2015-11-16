@@ -16,6 +16,8 @@ endif
 
 F2PY ?= f2py --quiet --fcompiler=$(FC)
 
+all: sppv.so prima.py
+
 sppv.so: SpaghettiPrimavera.f90
 	$(F2PY) -c -m sppv --f90flags="$(FFLAGS)" \
 		only: spaghettiprimavera sppv_data \
