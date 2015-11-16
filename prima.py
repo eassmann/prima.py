@@ -20,7 +20,7 @@ import os, sys, re, getopt, numpy, collections, webcolors, contextlib, \
   traceback, subprocess, warnings
 
 def git_version():
-    rev = "$version:v0.2.0-45-gf6bad12$"
+    rev = "$version:v0.3.0$"
 
     try:
         return re.search(":\s*(.*?)\s*\$", rev).group(1)
