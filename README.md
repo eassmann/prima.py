@@ -175,7 +175,7 @@ GitHub as [Issues](https://github.com/eassmann/prima.py/issues) or
 ACKNOWLEDGEMENTS
 ----------------
 
-Thanks to Maurits ⟨Maurits.Haverkort@cpfs.mpg.de⟩ for letting me build
+Thanks to [Maurits](http://www.cpfs.mpg.de/haverkort/) for letting me build
 upon his code.
 
 Hex colors and color names are handled by the `webcolors` module,
