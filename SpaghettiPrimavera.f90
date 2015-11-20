@@ -9,7 +9,7 @@
 !! Modified for inclusion in Python (prima.py):
 !!         Elias Assmann <elias.assmann@gmail.com> (2013-2015)
 
-!! prima.py version 0.2
+!! prima.py version 0.3
 !!
 !! $Id: SpaghettiPrimavera.f90 618 2015-09-14 15:58:11Z assmann $
 
