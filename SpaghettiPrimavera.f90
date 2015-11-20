@@ -385,7 +385,7 @@ subroutine WritePSKpoints(bandName, NKpoints, Xsize, Ysize, AxesThickness, &
   ! the labels and their position
   nkpoints=0
   nlabels=0
-  read(unit=1,fmt='(A)',iostat=OK,end=201) RDWD
+  read(unit=1,fmt='(A)',end=201) RDWD
   do while (RDWD.NE."END")
      nkpoints=nkpoints+1
      if(RDWD(1:1).NE." ") then
@@ -393,7 +393,7 @@ subroutine WritePSKpoints(bandName, NKpoints, Xsize, Ysize, AxesThickness, &
         label(nlabels)=RDWD(1:2)
         labelpoint(nlabels)=nkpoints
      endif
-     read(unit=1,fmt='(A)',iostat=OK,end=201) RDWD
+     read(unit=1,fmt='(A)',end=201) RDWD
   enddo
 
   if (writeKLines) then
@@ -528,7 +528,7 @@ subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
 
   ! find out how many atoms and orbitals there are
   nAtom=0
-  read(unit=2,fmt='(A)',iostat=OK,end=201) RDWD
+  read(unit=2,fmt='(A)',end=201) RDWD
   ! newer Wien2k versions seem to omit the colon in “BAND:”
   do while (index(RDWD,"BAND").EQ.0)
      if(index(RDWD,"JATOM").NE.0) then
@@ -556,7 +556,7 @@ subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
            end if
         enddo
      endif
-     read(unit=2,fmt='(A)',iostat=OK,end=201) RDWD
+     read(unit=2,fmt='(A)',end=201) RDWD
   enddo
   ! add the intersitial character
   nAtom=nAtom+1
@@ -568,8 +568,8 @@ subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
      iband=iband+1
      do i = 1, nkpoints
         do j = 1, nAtom
-           read(unit=2,fmt=*,iostat=OK,end=201) Energy,junki,&
-                &                            (OrbCharacter(j,k),k=1,nOrb(j))
+           read(unit=2,fmt=*,end=201) Energy,junki,&
+                &                     (OrbCharacter(j,k),k=1,nOrb(j))
         enddo
         Energy=(Energy-Efermi)*RydToEv
 
@@ -631,7 +631,7 @@ subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
         endif
      enddo
      ! read the string BAND: XX or iff EOF finished
-     read(unit=2,fmt='(A)',iostat=OK,end=300) RDWD
+     read(unit=2,fmt='(A)',end=300) RDWD
   enddo
 300 continue
   close(2)
