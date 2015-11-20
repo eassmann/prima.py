@@ -26,6 +26,7 @@ module sppv_data
   character(512) :: version
 
   integer, parameter :: MaxAtoms=1000, MaxOrbitals=50
+  character(len=512), parameter :: progname = "sppv.so"
 
   character(512) :: qtlName, bandName, cmdLine, fontName="Times-Roman"
   integer :: MinorTicks=4, nkpoints
@@ -65,47 +66,6 @@ module sppv_colors
        col_err=RED, col_klab=BLACK
 end module sppv_colors
 
-module clio                     ! excerpted from util_w2w.F
-  use iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
-  
-  implicit none
-  private
-
-  public :: croak, carp, cluck
-
-  character(len=*), parameter :: progname = "sppv.so"
-
-contains
-
-  subroutine croak(message, status)
-    character(len=*), intent(in), optional   :: message
-    integer,          intent(in), optional   :: status
-
-    integer            :: s
-    s=1
-
-    if (present(status)) s=status
-
-    if (present(message)) then
-       write(ERROR_UNIT, '(A, ": ", A)') progname, message
-    end if
-
-    call exit(s)
-  end subroutine croak
-
-  subroutine carp(message)
-    character(len=*), intent(in) :: message
-
-    write(ERROR_UNIT, '(A, ": ", A)') progname, message
-  end subroutine carp
-
-  subroutine cluck(message)
-    character(len=*), intent(in) :: message
-
-    write(OUTPUT_UNIT, '(A, ": ", A)') progname, message
-  end subroutine cluck
-end module clio
-
 subroutine SpaghettiPrimavera
   use sppv_data
 
@@ -127,6 +87,56 @@ subroutine SpaghettiPrimavera
   call WritePSTail()
 
 contains
+
+!!! Excerpted from util_w2w.F
+subroutine croak(message, status)
+  use iso_fortran_env, only: ERROR_UNIT
+  use sppv_data,       only: Ysize, progname, fontName, TextSize
+  use sppv_colors,     only: col_err
+  use sppv_formats,    only: fmt_color, fmt_move, fmt_scale
+
+  character(len=*), intent(in), optional   :: message
+  integer,          intent(in), optional   :: status
+
+  integer            :: s
+  s=1
+
+  if (present(status)) s=status
+
+  if (present(message)) then
+     write(ERROR_UNIT, '(A, ": ", A)') trim(progname), trim(message)
+     write(6,'(A)')"newpath"
+     write(6,'(A)')"/" // trim(fontName) // " findfont"
+     write(6,fmt_scale) TextSize
+     write(6,'(A)')"setfont"
+     write(6,fmt_color) col_err
+     write(6,fmt_move)50.,Ysize/2+50
+     write(6,'("(",A,") show")') message
+  end if
+
+  call WritePSTail()
+  close(6)
+  call exit(s)
+end subroutine croak
+
+subroutine carp(message)
+  use iso_fortran_env, only: ERROR_UNIT
+  use sppv_data,       only: progname
+
+  character(len=*), intent(in) :: message
+
+  write(ERROR_UNIT, '(A, ": ", A)') trim(progname), message
+end subroutine carp
+
+subroutine cluck(message)
+  use iso_fortran_env, only: OUTPUT_UNIT
+  use sppv_data,       only: progname
+
+  character(len=*), intent(in) :: message
+
+  write(OUTPUT_UNIT, '(A, ": ", A)') trim(progname), message
+end subroutine cluck
+!!! End util_w2w.F excerpt
 
 function CharacterToRGBColor(OrbCharacter) result(RGBColor)
   use sppv_data
@@ -369,17 +379,8 @@ subroutine WritePSKpoints(bandName, NKpoints, Xsize, Ysize, AxesThickness, &
   character :: RDWD*(128),label(100)*(2)
 
   open(unit=1, file=bandName, action='read', iostat=OK)
-  if(OK.NE.0) then
-     write(6,'(A)')"/" // trim(fontName) // " findfont"
-     write(6,fmt_scale) TextSize
-     write(6,'(A)')"setfont"
-     write(6,'(A)')"newpath"
-     write(6,fmt_color) col_err
-     write(6,fmt_move)50.,Ysize/2+50
-     write(6,'(A)')"(Could not open file",bandName,") show"
-     call WritePSTail()
-     stop
-  endif
+  if(OK.NE.0) call croak("Could not open klist file"//trim(bandName))
+
   ! read file "bandName" and filter the number of k-points, 
   ! the labels and their position
   nkpoints=0
@@ -401,7 +402,7 @@ subroutine WritePSKpoints(bandName, NKpoints, Xsize, Ysize, AxesThickness, &
         write(6,'(A)')"newpath"
         write(6,fmt_width) AxesThickness
         write(6,fmt_color) col_klab
-        write(6,fmt_move) 50+(labelpoint(ilabel)-1.0)*Xsize/(nkpoints-1.0), &
+        write(6,fmt_move) 50+(labelpoint(ilabel)-1.0)*Xsize/(nkpoints-1.0),&
              &            50.
         write(6,fmt_line) 50+(labelpoint(ilabel)-1.0)*Xsize/(nkpoints-1.0),&
              &            50+Ysize
@@ -428,30 +429,9 @@ subroutine WritePSKpoints(bandName, NKpoints, Xsize, Ysize, AxesThickness, &
 
   close(1)
   return
-  ! Goto 200 if the file "bandName" had an error upon reading
-  write(6,'(A)')"/" // trim(fontName) // " findfont"
-  write(6,fmt_scale)TextSize
-  write(6,'(A)')"setfont"
-  write(6,'(A)')"newpath"
-  write(6,fmt_color) col_err
-  write(6,fmt_move)50.,Ysize/2+50
-  write(6,'(A)')"(Unspecified error while reading file ",&
-       &              bandName,") show"
-  call WritePSTail()
-  close(1)
-  stop
-  ! Goto 201 if the file "bandName" ended before the string "END" was read
-201 write(6,'(A)')"/" // trim(fontName) // " findfont"
-  write(6,fmt_scale)TextSize
-  write(6,'(A)')"setfont"
-  write(6,'(A)')"newpath"
-  write(6,fmt_color) col_err
-  write(6,fmt_move)50.,Ysize/2+50
-  write(6,'(A)')"(Unexpected end of file while reading ",&
-       &              bandName,") show"
-  call WritePSTail()
-  stop
-  close(1)
+
+201 call croak("Unexpected end of file while reading qtl file "//&
+         trim(bandName))
 end subroutine WritePSKpoints
 
 subroutine WritePSLegend(TextSize, fontName, XSize, YSize, &
@@ -541,17 +521,7 @@ subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
   ptsPerK=Xsize/(nkpoints-1)
   ! Open the qtl file
   open(unit=2, file=qtlName, action='read', iostat=OK)
-  if(OK.NE.0) then
-     write(6,'(A)')"/" // trim(fontName) // " findfont"
-     write(6,fmt_scale)TextSize
-     write(6,'(A)')"setfont"
-     write(6,'(A)')"newpath"
-     write(6,fmt_color) col_err
-     write(6,fmt_move)50.,Ysize/2+50
-     write(6,'(A)')"(Could not open file",qtlName,") show"
-     call WritePSTail()
-     stop
-  endif
+  if(OK.NE.0) call croak("Could not open qtl file"//trim(qtlName))
 
   nOrb=0
   OrbCharacter=0
@@ -667,30 +637,9 @@ subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
   close(2)
   return
 
-  ! Goto 200 if the file "qtlName" had an error upon reading
-  write(6,'(A)')"/" // trim(fontName) // " findfont"
-  write(6,fmt_scale)TextSize
-  write(6,'(A)')"setfont"
-  write(6,'(A)')"newpath"
-  write(6,fmt_color) col_err
-  write(6,fmt_move)50.,Ysize/2+50
-  write(6,'(A)')"(Unspecified error while reading file ", &
-       &              qtlName,") show"
-  call WritePSTail()
-  close(2)
-  stop
   ! Goto 201 if the file "qtlName" ended before the end was expected
-201 write(6,'(A)')"/" // trim(fontName) // " findfont"
-  write(6,fmt_scale)TextSize
-  write(6,'(A)')"setfont"
-  write(6,'(A)')"newpath"
-  write(6,fmt_color) col_err
-  write(6,fmt_move)50.,Ysize/2+50
-  write(6,'(A)')"(Unexpected end of file while reading ", &
-       &              qtlName,") show"
-  call WritePSTail()
-  stop
-  close(2)
+201 call croak("Unexpected end of file while reading qtl file "//&
+         qtlName)
 end subroutine WritePSBands
 end subroutine SpaghettiPrimavera
 
