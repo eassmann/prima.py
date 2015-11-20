@@ -65,6 +65,47 @@ module sppv_colors
        col_err=RED, col_klab=BLACK
 end module sppv_colors
 
+module clio                     ! excerpted from util_w2w.F
+  use iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
+  
+  implicit none
+  private
+
+  public :: croak, carp, cluck
+
+  character(len=*), parameter :: progname = "sppv.so"
+
+contains
+
+  subroutine croak(message, status)
+    character(len=*), intent(in), optional   :: message
+    integer,          intent(in), optional   :: status
+
+    integer            :: s
+    s=1
+
+    if (present(status)) s=status
+
+    if (present(message)) then
+       write(ERROR_UNIT, '(A, ": ", A)') progname, message
+    end if
+
+    call exit(s)
+  end subroutine croak
+
+  subroutine carp(message)
+    character(len=*), intent(in) :: message
+
+    write(ERROR_UNIT, '(A, ": ", A)') progname, message
+  end subroutine carp
+
+  subroutine cluck(message)
+    character(len=*), intent(in) :: message
+
+    write(OUTPUT_UNIT, '(A, ": ", A)') progname, message
+  end subroutine cluck
+end module clio
+
 subroutine SpaghettiPrimavera
   use sppv_data
 
@@ -625,6 +666,7 @@ subroutine WritePSBands(qtlName, nkpoints, Xsize, Ysize, &
 300 continue
   close(2)
   return
+
   ! Goto 200 if the file "qtlName" had an error upon reading
   write(6,'(A)')"/" // trim(fontName) // " findfont"
   write(6,fmt_scale)TextSize
