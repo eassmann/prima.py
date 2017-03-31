@@ -5,8 +5,8 @@
 USAGE
 -----
 
-This is a wrapper script for [Maurits Haverkort's `SpaghettiPrimavera.f90`]
-(http://www.cpfs.mpg.de/haverkort/spaghetti_primavera).
+This is a wrapper script for Maurits Haverkort's 
+[`SpaghettiPrimavera.f90`](http://www.cpfs.mpg.de/haverkort/spaghetti_primavera).
 It produces the same kind of plots but should provide a simpler
 interface.  Like `SpaghettiPrimavera.f90`, it needs a`$case.klist_band`
 and a corresponding `$case.qtl` file; it also reads `$case.struct` if
@@ -16,8 +16,8 @@ If it exists, `$case.qtl[up|dn]_band` is preferred over `$case.qtl[up|dn]`.
 (Wien2k does not use `.qtl_band` but it is often convenient to rename
 a `.qtl` file intended for band structures.)
 
-See `prima.py -h` and `prima.py` (executed in a suitable [Wien2k]
-(http://wien2k.at) directory) for usage hints.
+See `prima.py -h` and `prima.py` (executed in a suitable [Wien2k](http://wien2k.at)
+directory) for usage hints.
 
 
 ### An Example
