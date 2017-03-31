@@ -138,7 +138,7 @@ INSTALLATION
 To download `prima.py`, go to the [GitHub page](https://github.com/eassmann/prima.py)
 and download from `master` for the cutting-edge version, or get the
 latest [release](https://github.com/eassmann/prima.py/releases) if you
-prefer more stable code.
+prefer a stabler version.
 
 `prima.py` needs Python 2, NumPy, F2PY (which is now part of NumPy), and
 a modern Fortran compiler.  I tested it with the following versions:
@@ -150,9 +150,19 @@ a modern Fortran compiler.  I tested it with the following versions:
 
 Running `make` in the `prima` directory should produce the file
 `sppv.so`.  Python must be able to find this file, and the file
-`webcolors.py`.  This is easiest if you create a symlink to prima.py
-in some directory in your $PATH, or add the `prima` directory to your
-$PATH.
+`webcolors.py`.  This is easiest if you create a symlink to `prima.py`
+in some directory in your `$PATH`, or add the `prima` directory to
+your `$PATH`.
+
+In the simplest case, the whole procedure is accomplished by the
+commands
+```
+git clone https://github.com/eassmann/prima.py.git
+cd prima.py
+make
+ln -sr prima.py $BIN
+```
+where `$BIN ∈ $PATH`
 
 
 MORE INFORMATION
@@ -160,7 +170,7 @@ MORE INFORMATION
 
 The [wiki](https://github.com/eassmann/prima.py/wiki) has a set of
 [example plots](https://github.com/eassmann/prima.py/wiki/Examples)
-made with prima.py.  Questions regarding the usage of `prima.py` could
+made with `prima.py`.  Questions regarding the usage of `prima.py` could
 be appropriate for the [Wien2k mailing list](http://www.wien2k.at/reg_user/mailing_list/).
 
 
