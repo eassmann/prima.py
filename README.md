@@ -162,7 +162,7 @@ cd prima.py
 make
 ln -sr prima.py $BIN
 ```
-where `$BIN ∈ $PATH`
+where `$BIN ∈ $PATH`.
 
 
 MORE INFORMATION
